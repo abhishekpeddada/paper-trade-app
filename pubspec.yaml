@@ -1,0 +1,30 @@
+name: paper_trade_app
+description: A Flutter app for paper trading with Upstox-like UI and Yahoo Finance data.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  http: ^1.1.0
+  provider: ^6.0.5
+  fl_chart: ^0.63.0
+  google_fonts: ^5.1.0
+  shared_preferences: ^2.2.0
+  intl: ^0.18.1
+  uuid: ^3.0.7
+  flutter_markdown: ^0.7.7+1
+  flutter_secure_storage: ^9.2.4
+  wakelock_plus: ^1.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
