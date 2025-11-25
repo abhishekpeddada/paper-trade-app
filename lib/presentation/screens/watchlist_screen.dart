@@ -50,80 +50,96 @@ class WatchlistScreen extends StatelessWidget {
               final stock = provider.watchlist[index];
               final isPositive = stock.change >= 0;
 
-              return CustomCard(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          stock.symbol,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'NSE', // Placeholder exchange
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                         Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '\$${stock.price.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isPositive ? AppTheme.primaryColor : AppTheme.secondaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${isPositive ? '+' : ''}${stock.change.toStringAsFixed(2)} (${stock.changePercent.toStringAsFixed(2)}%)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isPositive ? AppTheme.primaryColor : AppTheme.secondaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.auto_awesome, size: 20, color: AppTheme.accentColor),
-                          onPressed: () {
-                             // Trigger AI Analysis
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('Requesting AI Analysis... Check AI Desk.')),
-                             );
-                             // We need to access AiProvider here, but it might be better to do this in detail screen or have a direct call
-                             // For now, let's just navigate to detail screen where we can put the button more prominently
-                             // Or actually, let's just call it if we can
-                             // Provider.of<AiProvider>(context, listen: false).analyzeAndTrade(stock.symbol, stock.price);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+              return Dismissible(
+                key: Key(stock.symbol),
+                background: Container(
+                  color: AppTheme.secondaryColor,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => StockDetailScreen(initialStock: stock),
-                    ),
+                direction: DismissDirection.endToStart,
+                onDismissed: (direction) {
+                  provider.removeFromWatchlist(stock.symbol);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${stock.symbol} removed from watchlist')),
                   );
                 },
+                child: CustomCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            stock.symbol,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'NSE', // Placeholder exchange
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                           Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '\$${stock.price.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPositive ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${isPositive ? '+' : ''}${stock.change.toStringAsFixed(2)} (${stock.changePercent.toStringAsFixed(2)}%)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isPositive ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.auto_awesome, size: 20, color: AppTheme.accentColor),
+                            onPressed: () {
+                               // Trigger AI Analysis
+                               ScaffoldMessenger.of(context).showSnackBar(
+                                 const SnackBar(content: Text('Requesting AI Analysis... Check AI Desk.')),
+                               );
+                               // We need to access AiProvider here, but it might be better to do this in detail screen or have a direct call
+                               // For now, let's just navigate to detail screen where we can put the button more prominently
+                               // Or actually, let's just call it if we can
+                               // Provider.of<AiProvider>(context, listen: false).analyzeAndTrade(stock.symbol, stock.price);
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StockDetailScreen(initialStock: stock),
+                      ),
+                    );
+                  },
+                ),
               );
             },
           );

@@ -6,8 +6,8 @@ class AiRepository {
   final YahooFinanceService _yahooService = YahooFinanceService();
   OpenRouterService? _aiService;
 
-  void setApiKey(String key) {
-    _aiService = OpenRouterService(key);
+  void setApiKey(String key, {String model = 'z-ai/glm-4.5-air:free'}) {
+    _aiService = OpenRouterService(key, model: model);
   }
 
   bool get hasKey => _aiService != null;
@@ -74,8 +74,8 @@ class AiRepository {
     }
   }
 
-  Future<String> getTradingSystem() async {
+  Future<String> getTradingSystem({String? userPreferences}) async {
     if (_aiService == null) throw Exception('API Key not set');
-    return await _aiService!.generateTradingSystem();
+    return await _aiService!.generateTradingSystem(userPreferences: userPreferences);
   }
 }

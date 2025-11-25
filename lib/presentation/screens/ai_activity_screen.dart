@@ -25,7 +25,7 @@ class AiActivityScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: aiProvider.isAnalyzing ? null : () => aiProvider.generateSystem(),
+        onPressed: aiProvider.isAnalyzing ? null : () => _showPreferencesDialog(context, aiProvider),
         backgroundColor: AppTheme.accentColor,
         label: Text(aiProvider.isAnalyzing ? 'Analyzing...' : 'Generate New System'),
         icon: aiProvider.isAnalyzing 
@@ -135,5 +135,71 @@ class AiActivityScreen extends StatelessWidget {
     );
   }
 
+  void _showPreferencesDialog(BuildContext context, AiProvider provider) {
+    final TextEditingController controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: const Text(
+          'System Preferences',
+          style: TextStyle(color: AppTheme.textPrimary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Add your trading preferences or requirements:',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 5,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                hintText: 'e.g., "Focus on momentum trading", "Include MACD indicator", "Low risk tolerance"...',
+                hintStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                filled: true,
+                fillColor: AppTheme.backgroundColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Leave blank for general system',
+              style: TextStyle(
+                color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              provider.generateSystem(userPreferences: controller.text.trim());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+  }
 
 }

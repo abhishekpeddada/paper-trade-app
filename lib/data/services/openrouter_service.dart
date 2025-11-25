@@ -4,8 +4,29 @@ import 'package:http/http.dart' as http;
 class OpenRouterService {
   static const String baseUrl = 'https://openrouter.ai/api/v1';
   final String apiKey;
+  String model;
 
-  OpenRouterService(this.apiKey);
+  OpenRouterService(this.apiKey, {this.model = 'z-ai/glm-4.5-air:free'});
+
+  // Popular OpenRouter models
+  static final List<Map<String, String>> popularModels = [
+    {'id': 'z-ai/glm-4.5-air:free', 'name': 'GLM-4.5 Air (Free)'},
+    {'id': 'meta-llama/llama-3.1-70b-instruct:free', 'name': 'Llama 3.1 70B (Free)'},
+    {'id': 'google/gemini-flash-1.5', 'name': 'Gemini Flash 1.5'},
+    {'id': 'anthropic/claude-3.5-sonnet', 'name': 'Claude 3.5 Sonnet'},
+    {'id': 'openai/gpt-4o', 'name': 'GPT-4o'},
+    {'id': 'openai/gpt-4o-mini', 'name': 'GPT-4o Mini'},
+    {'id': 'anthropic/claude-3-haiku', 'name': 'Claude 3 Haiku'},
+    {'id': 'google/gemini-pro-1.5', 'name': 'Gemini Pro 1.5'},
+    {'id': 'mistralai/mistral-large', 'name': 'Mistral Large'},
+    {'id': 'tngtech/deepseek-r1t2-chimera:free', 'name': 'DeepSeek R1T2 Chimera (free)'},
+    {'id': 'x-ai/grok-4.1-fast:free', 'name': 'xAI: Grok 4.1 Fast (Free)'},
+    {'id': 'kwaipilot/kat-coder-pro:free', 'name': 'Kwaipilot: KAT-Coder-Pro V1 (free)'},
+    {'id': 'openai/gpt-oss-20b:free', 'name': 'OpenAI: gpt-oss-20b (free)'},
+    {'id': 'microsoft/mai-ds-r1:free', 'name': 'Microsoft: MAI DS R1 (free)'},
+    {'id': 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free', 'name': 'Venice: Uncensored (free)'},
+    {'id': 'arliai/qwq-32b-arliai-rpr-v1:free', 'name': 'ArliAI: QwQ 32B RpR v1 (free)'}
+  ];
 
   Future<String> analyzeMarket(String symbol, List<Map<String, dynamic>> history) async {
     // Limit history to last 30 days to save tokens
@@ -26,8 +47,8 @@ class OpenRouterService {
     return _callAI(prompt);
   }
 
-  Future<String> generateTradingSystem() async {
-    const prompt = '''
+  Future<String> generateTradingSystem({String? userPreferences}) async {
+    String prompt = '''
     Generate a robust algorithmic trading system description based on technical analysis.
     Include:
     1. Strategy Name
@@ -38,6 +59,10 @@ class OpenRouterService {
     
     Keep it concise and actionable.
     ''';
+    
+    if (userPreferences != null && userPreferences.isNotEmpty) {
+      prompt += '\n\nUser Preferences/Requirements:\n$userPreferences\n\nIncorporate these preferences into the trading system.';
+    }
     
     return _callAI(prompt);
   }
@@ -53,7 +78,7 @@ class OpenRouterService {
           'X-Title': 'Paper Trade App',
         },
         body: json.encode({
-          'model': 'z-ai/glm-4.5-air:free', // Using a free model for now
+          'model': model,
           'messages': [
             {'role': 'user', 'content': prompt}
           ],

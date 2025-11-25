@@ -11,11 +11,13 @@ class AiProvider extends ChangeNotifier {
   final _secureStorage = const FlutterSecureStorage();
   
   String? _apiKey;
+  String _selectedModel = 'z-ai/glm-4.5-air:free';
   String _tradingSystem = "No system generated yet.";
   List<String> _activityLog = [];
   bool _isAnalyzing = false;
 
   String? get apiKey => _apiKey;
+  String get selectedModel => _selectedModel;
   String get tradingSystem => _tradingSystem;
   List<String> get activityLog => _activityLog;
   bool get isAnalyzing => _isAnalyzing;
@@ -27,23 +29,38 @@ class AiProvider extends ChangeNotifier {
   Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
     _apiKey = await _secureStorage.read(key: 'openrouter_api_key');
+    _selectedModel = prefs.getString('ai_model') ?? 'z-ai/glm-4.5-air:free';
     _tradingSystem = prefs.getString('trading_system') ?? "No system generated yet.";
     _activityLog = prefs.getStringList('ai_activity_log') ?? [];
     
     if (_apiKey != null) {
-      _repository.setApiKey(_apiKey!);
+      _repository.setApiKey(_apiKey!, model: _selectedModel);
     }
     notifyListeners();
   }
 
   Future<void> setApiKey(String key) async {
     _apiKey = key;
-    _repository.setApiKey(key);
+    _repository.setApiKey(key, model: _selectedModel);
     await _secureStorage.write(key: 'openrouter_api_key', value: key);
     notifyListeners();
   }
 
-  Future<void> generateSystem() async {
+  Future<void> setModel(String model) async {
+    _selectedModel = model;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ai_model', model);
+    
+    // Update service with new model
+    if (_apiKey != null) {
+      _repository.setApiKey(_apiKey!, model: model);
+    }
+    
+    notifyListeners();
+    print('🤖 AI model changed to: $model');
+  }
+
+  Future<void> generateSystem({String? userPreferences}) async {
     if (_apiKey == null) return;
     
     _isAnalyzing = true;
@@ -58,13 +75,17 @@ class AiProvider extends ChangeNotifier {
     }
 
     try {
-      final system = await _repository.getTradingSystem();
+      final system = await _repository.getTradingSystem(userPreferences: userPreferences);
       _tradingSystem = system;
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('trading_system', system);
       
-      _log("Generated new trading system.");
+      if (userPreferences != null && userPreferences.isNotEmpty) {
+        _log("Generated new trading system with custom preferences.");
+      } else {
+        _log("Generated new trading system.");
+      }
     } catch (e) {
       _log("Error generating system: $e");
     } finally {
