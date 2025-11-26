@@ -7,6 +7,11 @@ import '../../core/theme/app_theme.dart';
 
 import 'orders_screen.dart';
 import 'account_screen.dart';
+import 'package:provider/provider.dart';
+import '../../logic/providers/auto_trading_provider.dart';
+import '../../logic/providers/ai_provider.dart';
+import '../../logic/providers/portfolio_provider.dart';
+import '../../logic/providers/watchlist_provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -15,8 +20,21 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
+
+
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ai = context.read<AIProvider>();
+      final portfolio = context.read<PortfolioProvider>();
+      final watchlist = context.read<WatchlistProvider>();
+      context.read<AutoTradingProvider>().runDailyScan(ai, portfolio, watchlist);
+    });
+  }
 
   final List<Widget> _screens = [
     const WatchlistScreen(),

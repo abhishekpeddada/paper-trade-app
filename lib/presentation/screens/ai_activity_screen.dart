@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../logic/providers/ai_provider.dart';
+import '../../logic/providers/auto_trading_provider.dart';
+import '../../logic/providers/portfolio_provider.dart';
+import '../../logic/providers/watchlist_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'pinescript_screen.dart';
@@ -11,6 +14,8 @@ class AiActivityScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final aiProvider = Provider.of<AIProvider>(context);
+    final portfolioProvider = Provider.of<PortfolioProvider>(context);
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -21,9 +26,11 @@ class AiActivityScreen extends StatelessWidget {
           _buildPineScriptCard(context),
           const SizedBox(height: 8),
           _buildSystemCard(context, aiProvider),
+          const SizedBox(height: 8),
+          _buildAutomationCard(context, aiProvider, portfolioProvider, watchlistProvider),
           const Divider(height: 1, color: AppTheme.surfaceColor),
           Expanded(
-            child: _buildActivityLog(aiProvider),
+            child: _buildConsole(context),
           ),
         ],
       ),
@@ -35,6 +42,129 @@ class AiActivityScreen extends StatelessWidget {
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
             : const Icon(Icons.auto_awesome),
       ),
+    );
+  }
+
+  Widget _buildAutomationCard(BuildContext context, AIProvider ai, PortfolioProvider portfolio, WatchlistProvider watchlist) {
+    return Consumer<AutoTradingProvider>(
+      builder: (context, provider, child) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Auto-Trading & Analysis',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (provider.isRunning)
+                Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: provider.progress,
+                      backgroundColor: AppTheme.backgroundColor,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Processing... ${(provider.progress * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => provider.analyzeWatchlist(ai, portfolio, watchlist),
+                        icon: const Icon(Icons.list_alt, size: 18),
+                        label: const Text('Analyze Watchlist'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => provider.analyzePortfolio(ai, portfolio, watchlist, force: true),
+                        icon: const Icon(Icons.pie_chart, size: 18),
+                        label: const Text('Analyze Portfolio'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.textPrimary,
+                          side: const BorderSide(color: AppTheme.textSecondary),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConsole(BuildContext context) {
+    return Consumer<AutoTradingProvider>(
+      builder: (context, provider, child) {
+        if (provider.logs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.terminal, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                const SizedBox(height: 12),
+                const Text(
+                  'Ready for automated analysis',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: provider.logs.length,
+          itemBuilder: (context, index) {
+            final log = provider.logs[index];
+            final isError = log.contains('Error') || log.contains('failed');
+            final isTrade = log.contains('Trade executed');
+            final isSignal = log.contains('BUY') || log.contains('SELL');
+
+            Color color = AppTheme.textSecondary;
+            if (isError) color = AppTheme.secondaryColor;
+            if (isTrade) color = AppTheme.primaryColor;
+            if (isSignal) color = Colors.white;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                log,
+                style: TextStyle(
+                  color: color,
+                  fontFamily: 'Monospace',
+                  fontSize: 12,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -156,52 +286,6 @@ class AiActivityScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildActivityLog(AIProvider provider) {
-    if (provider.activityLog.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.history, size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
-            const SizedBox(height: 16),
-            const Text(
-              'No activity yet',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: provider.activityLog.length,
-      itemBuilder: (context, index) {
-        final log = provider.activityLog[index];
-        final isError = (log['result'] as String).contains('ERROR') || (log['action'] as String).contains('Error');
-        final isTrade = (log['action'] as String).contains('bought') || (log['action'] as String).contains('sold');
-        
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceColor,
-            borderRadius: BorderRadius.circular(8),
-            border: isTrade ? Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)) : null,
-          ),
-          child: Text(
-            '[${(log['timestamp'] as DateTime).toString().substring(11, 19)}] ${log['action']} → ${log['result']}',
-            style: TextStyle(
-              color: isError ? AppTheme.secondaryColor : AppTheme.textPrimary,
-              fontSize: 13,
-              fontFamily: 'Monospace',
-            ),
-          ),
-        );
-      },
     );
   }
 

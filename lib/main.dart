@@ -7,6 +7,7 @@ import 'logic/providers/portfolio_provider.dart';
 import 'logic/providers/watchlist_provider.dart';
 import 'logic/providers/ai_provider.dart';
 import 'logic/providers/pine_provider.dart';
+import 'logic/providers/auto_trading_provider.dart';
 import 'data/repositories/pine_repository.dart';
 import 'data/services/openrouter_service.dart';
 import 'data/services/yahoo_finance_service.dart';
@@ -44,6 +45,9 @@ class PaperTradeApp extends StatelessWidget {
             final repository = PineScriptRepository(openRouterService, yahooFinanceService);
             return PineScriptProvider(repository);
           },
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AutoTradingProvider(),
         ),
       ],
       child: MaterialApp(

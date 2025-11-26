@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/openrouter_service.dart';
 import '../../data/services/yahoo_finance_service.dart';
@@ -37,8 +38,37 @@ class AIProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _apiKey = prefs.getString('ai_api_key') ?? _apiKey;
     _selectedModel = prefs.getString('ai_model') ?? _selectedModel;
+    _tradingSystem = prefs.getString('ai_trading_system') ?? _tradingSystem;
+    
+    final logsJson = prefs.getString('ai_activity_log');
+    if (logsJson != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(logsJson);
+        _activityLog.clear();
+        _activityLog.addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
+      } catch (e) {
+        debugPrint('Error loading logs: $e');
+      }
+    }
+    
     _aiService = OpenRouterService(_apiKey, model: _selectedModel);
     notifyListeners();
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ai_trading_system', _tradingSystem);
+    
+    // Convert DateTime objects to strings for JSON serialization
+    final logsToSave = _activityLog.map((log) {
+      final Map<String, dynamic> copy = Map.from(log);
+      if (copy['timestamp'] is DateTime) {
+        copy['timestamp'] = (copy['timestamp'] as DateTime).toIso8601String();
+      }
+      return copy;
+    }).toList();
+    
+    await prefs.setString('ai_activity_log', jsonEncode(logsToSave));
   }
 
   Future<void> setApiKey(String newApiKey) async {
@@ -61,6 +91,7 @@ class AIProvider extends ChangeNotifier {
 
   void clearLogs() {
     _activityLog.clear();
+    _saveState();
     notifyListeners();
   }
 
@@ -124,7 +155,7 @@ class AIProvider extends ChangeNotifier {
 
   void _addToLog(String action, String result) {
     _activityLog.insert(0, {
-      'timestamp': DateTime.now(),
+      'timestamp': DateTime.now().toIso8601String(), // Store as string directly
       'action': action,
       'result': result,
     });
@@ -132,6 +163,7 @@ class AIProvider extends ChangeNotifier {
     if (_activityLog.length > 50) {
       _activityLog.removeLast();
     }
+    _saveState();
   }
 
   Future<void> generateSystem({String? userPreferences}) async {
