@@ -5,6 +5,47 @@ import 'package:fl_chart/fl_chart.dart';
 
 class YahooFinanceService {
   static const String baseUrl = 'https://query1.finance.yahoo.com/v8/finance/chart';
+  
+  // Get historical data for AI analysis
+  Future<List<Map<String, dynamic>>> getHistoricalData(String symbol, {int days = 30}) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/$symbol?interval=1d&range=${days}d'));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final result = data['chart']['result'][0];
+        final timestamps = result['timestamp'] as List<dynamic>?;
+        final indicators = result['indicators']['quote'][0];
+        final opens = indicators['open'] as List<dynamic>?;
+        final highs = indicators['high'] as List<dynamic>?;
+        final lows = indicators['low'] as List<dynamic>?;
+        final closes = indicators['close'] as List<dynamic>?;
+        final volumes = indicators['volume'] as List<dynamic>?;
+        
+        List<Map<String, dynamic>> history = [];
+        if (timestamps != null && closes != null) {
+          for (int i = 0; i < timestamps.length; i++) {
+            if (closes[i] != null) {
+              history.add({
+                'timestamp': timestamps[i],
+                'date': DateTime.fromMillisecondsSinceEpoch(timestamps[i] * 1000).toIso8601String(),
+                'open': opens?[i],
+                'high': highs?[i],
+                'low': lows?[i],
+                'close': (closes[i] as num).toDouble(),
+                'volume': volumes?[i],
+              });
+            }
+          }
+        }
+        return history;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching historical data: $e');
+      return [];
+    }
+  }
 
   Future<Stock> getStockData(String symbol, {String timeframe = '1d'}) async {
     try {
@@ -113,47 +154,5 @@ class YahooFinanceService {
        print('Search error: $e');
      }
      return [];
-  }
-
-  // Fetch historical candle data for AI analysis
-  Future<List<Map<String, dynamic>>> getHistoricalData(String symbol, {String range = '1mo', String interval = '1d'}) async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/$symbol?interval=$interval&range=$range'));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final result = data['chart']['result'][0];
-        final timestamp = result['timestamp'] as List<dynamic>?;
-        final indicators = result['indicators']['quote'][0];
-        
-        final opens = indicators['open'] as List<dynamic>?;
-        final highs = indicators['high'] as List<dynamic>?;
-        final lows = indicators['low'] as List<dynamic>?;
-        final closes = indicators['close'] as List<dynamic>?;
-        final volumes = indicators['volume'] as List<dynamic>?;
-
-        List<Map<String, dynamic>> candles = [];
-        if (timestamp != null && closes != null) {
-          for (int i = 0; i < timestamp.length; i++) {
-            if (closes[i] != null) {
-              candles.add({
-                'date': DateTime.fromMillisecondsSinceEpoch(timestamp[i] * 1000).toIso8601String(),
-                'open': opens?[i],
-                'high': highs?[i],
-                'low': lows?[i],
-                'close': closes[i],
-                'volume': volumes?[i],
-              });
-            }
-          }
-        }
-        return candles;
-      } else {
-        throw Exception('Failed to load historical data');
-      }
-    } catch (e) {
-      print('Error fetching history for $symbol: $e');
-      return [];
-    }
   }
 }

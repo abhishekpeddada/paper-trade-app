@@ -9,7 +9,7 @@ class AiActivityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aiProvider = Provider.of<AiProvider>(context);
+    final aiProvider = Provider.of<AIProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -35,7 +35,7 @@ class AiActivityScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSystemCard(BuildContext context, AiProvider provider) {
+  Widget _buildSystemCard(BuildContext context, AIProvider provider) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -89,7 +89,7 @@ class AiActivityScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActivityLog(AiProvider provider) {
+  Widget _buildActivityLog(AIProvider provider) {
     if (provider.activityLog.isEmpty) {
       return Center(
         child: Column(
@@ -111,8 +111,8 @@ class AiActivityScreen extends StatelessWidget {
       itemCount: provider.activityLog.length,
       itemBuilder: (context, index) {
         final log = provider.activityLog[index];
-        final isError = log.contains('Error');
-        final isTrade = log.contains('Executing');
+        final isError = (log['result'] as String).contains('ERROR') || (log['action'] as String).contains('Error');
+        final isTrade = (log['action'] as String).contains('bought') || (log['action'] as String).contains('sold');
         
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -123,7 +123,7 @@ class AiActivityScreen extends StatelessWidget {
             border: isTrade ? Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)) : null,
           ),
           child: Text(
-            log,
+            '[${(log['timestamp'] as DateTime).toString().substring(11, 19)}] ${log['action']} → ${log['result']}',
             style: TextStyle(
               color: isError ? AppTheme.secondaryColor : AppTheme.textPrimary,
               fontSize: 13,
@@ -135,7 +135,7 @@ class AiActivityScreen extends StatelessWidget {
     );
   }
 
-  void _showPreferencesDialog(BuildContext context, AiProvider provider) {
+  void _showPreferencesDialog(BuildContext context, AIProvider provider) {
     final TextEditingController controller = TextEditingController();
     
     showDialog(

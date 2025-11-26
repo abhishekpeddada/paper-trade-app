@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../logic/providers/portfolio_provider.dart';
+import '../../logic/providers/ai_provider.dart';
+import '../../data/models/ai_signal.dart';
 import '../../data/models/stock_model.dart';
 import '../../data/models/trade_models.dart';
 import '../../core/theme/app_theme.dart';
@@ -20,11 +22,24 @@ class TradeBottomSheet extends StatefulWidget {
 class _TradeBottomSheetState extends State<TradeBottomSheet> {
   final TextEditingController _qtyController = TextEditingController();
   double _estimatedTotal = 0.0;
+  AISignal? _aiSignal;
+  bool _showingAIAnalysis = false;
 
   @override
   void initState() {
     super.initState();
     _qtyController.addListener(_updateTotal);
+    _fetchAISignal();
+  }
+
+  void _fetchAISignal() async {
+    final aiProvider = context.read<AIProvider>();
+    final signal = await aiProvider.analyzeStock(widget.stock.symbol);
+    if (mounted) {
+      setState(() {
+        _aiSignal = signal;
+      });
+    }
   }
 
   void _updateTotal() {
@@ -77,7 +92,99 @@ class _TradeBottomSheetState extends State<TradeBottomSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          Consumer<AIProvider>(
+            builder: (context, aiProvider, child) {
+              if (aiProvider.isAnalyzing) {
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceColor.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Analyzing with AI...', style: TextStyle(color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                );
+              }
+              
+              if (_aiSignal != null) {
+                final signalColor = _aiSignal!.signal == 'BUY' 
+                    ? AppTheme.primaryColor 
+                    : _aiSignal!.signal == 'SELL' 
+                        ? AppTheme.secondaryColor 
+                        : Colors.grey;
+                        
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: signalColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: signalColor.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.auto_awesome, color: signalColor, size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                'AI Signal: ${_aiSignal!.signal}',
+                                style: TextStyle(
+                                  color: signalColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: signalColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${(_aiSignal!.confidence * 100).toStringAsFixed(0)}% confidence',
+                              style: TextStyle(
+                                color: signalColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _aiSignal!.reasoning,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              return const SizedBox.shrink();
+            },
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(

@@ -8,6 +8,7 @@ import '../widgets/trade_bottom_sheet.dart';
 import '../../data/models/trade_models.dart';
 import 'package:provider/provider.dart';
 import '../../logic/providers/ai_provider.dart';
+import '../../logic/providers/portfolio_provider.dart';
 
 class StockDetailScreen extends StatefulWidget {
   final Stock initialStock;
@@ -104,15 +105,17 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
-                     Provider.of<AiProvider>(context, listen: false).analyzeAndTrade(stock.symbol, stock.price);
+                     final aiProvider = Provider.of<AIProvider>(context, listen: false);
+                     final portfolioProvider = Provider.of<PortfolioProvider>(context, listen: false);
+                     aiProvider.analyzeAndTrade(stock.symbol, stock.price, portfolio: portfolioProvider);
                      ScaffoldMessenger.of(context).showSnackBar(
-                       const SnackBar(content: Text('AI Analysis started... Check AI Desk.')),
+                       const SnackBar(content: Text('AI Analysis started...')),
                      );
                   },
                   icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('Analyze'),
+                  label: const Text('AI Trade'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentColor,
+                    backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),

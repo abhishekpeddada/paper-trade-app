@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/stock_model.dart';
@@ -9,16 +10,23 @@ class WatchlistProvider extends ChangeNotifier {
   List<String> _searchResults = [];
   bool _isLoading = false;
   String? _error;
+  Timer? _refreshTimer;
+  DateTime? _lastRefresh;
 
   List<Stock> get watchlist => _watchlist;
   List<String> get searchResults => _searchResults;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  DateTime? get lastRefresh => _lastRefresh;
 
   // Stored symbol list
   List<String> _symbols = [];
 
+  // Initial default symbols
+  final List<String> _defaultSymbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'];
+
   WatchlistProvider() {
+    _startAutoRefresh();
     _loadAndFetchWatchlist();
   }
 
@@ -38,21 +46,48 @@ class WatchlistProvider extends ChangeNotifier {
     print('💾 Saved ${_symbols.length} symbols to storage');
   }
 
-  Future<void> fetchWatchlist() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  void _startAutoRefresh() {
+    // Refresh every 10 minutes
+    _refreshTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
+      if (_isWeekday()) {
+        fetchWatchlist(silent: true);
+      }
+    });
+  }
+
+  bool _isWeekday() {
+    final now = DateTime.now();
+    return now.weekday >= DateTime.monday && now.weekday <= DateTime.friday;
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> fetchWatchlist({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       print('🔄 Fetching watchlist for ${_symbols.length} symbols...');
       _watchlist = await _repository.getWatchlist(_symbols);
+      _lastRefresh = DateTime.now();
       print('✅ Loaded ${_watchlist.length} stocks');
     } catch (e) {
       print('❌ Error fetching watchlist: $e');
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!silent) { // Only set loading to false and notify if not silent
+        _isLoading = false;
+        notifyListeners();
+      } else if (_error != null) { // If silent and an error occurred, still notify
+        notifyListeners();
+      }
     }
   }
 

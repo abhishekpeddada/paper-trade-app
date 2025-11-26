@@ -1,171 +1,159 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
-import '../../data/repositories/ai_repository.dart';
+import '../../data/services/openrouter_service.dart';
+import '../../data/services/yahoo_finance_service.dart';
+import '../../data/models/ai_signal.dart';
+import '../../data/models/trade_models.dart';
 import 'portfolio_provider.dart';
 
-class AiProvider extends ChangeNotifier {
-  final AiRepository _repository = AiRepository();
-  final PortfolioProvider _portfolioProvider;
-  final _secureStorage = const FlutterSecureStorage();
+class AIProvider extends ChangeNotifier {
+  OpenRouterService _aiService;
+  final YahooFinanceService _financeService = YahooFinanceService();
   
-  String? _apiKey;
-  String _selectedModel = 'z-ai/glm-4.5-air:free';
-  String _tradingSystem = "No system generated yet.";
-  List<String> _activityLog = [];
+  String _apiKey;
+  String _selectedModel;
   bool _isAnalyzing = false;
+  AISignal? _lastSignal;
+  String? _error;
+  final List<Map<String, dynamic>> _activityLog = [];
+  String _tradingSystem = '# Trading System\n\nNo trading system generated yet.\n\nClick "Generate New System" to create one.';
 
-  String? get apiKey => _apiKey;
-  String get selectedModel => _selectedModel;
-  String get tradingSystem => _tradingSystem;
-  List<String> get activityLog => _activityLog;
   bool get isAnalyzing => _isAnalyzing;
+  AISignal? get lastSignal => _lastSignal;
+  String? get error => _error;
+  String get apiKey => _apiKey;
+  String get selectedModel => _selectedModel;
+  List<Map<String, dynamic>> get activityLog => _activityLog;
+  String get tradingSystem => _tradingSystem;
 
-  AiProvider(this._portfolioProvider) {
-    _loadState();
+  AIProvider({required String apiKey, String? model})
+      : _apiKey = apiKey,
+        _selectedModel = model ?? 'z-ai/glm-4.5-air:free',
+        _aiService = OpenRouterService(apiKey, model: model ?? 'z-ai/glm-4.5-air:free') {
+    _loadSettings();
   }
 
-  Future<void> _loadState() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    _apiKey = await _secureStorage.read(key: 'openrouter_api_key');
-    _selectedModel = prefs.getString('ai_model') ?? 'z-ai/glm-4.5-air:free';
-    _tradingSystem = prefs.getString('trading_system') ?? "No system generated yet.";
-    _activityLog = prefs.getStringList('ai_activity_log') ?? [];
+    _apiKey = prefs.getString('ai_api_key') ?? _apiKey;
+    _selectedModel = prefs.getString('ai_model') ?? _selectedModel;
+    _aiService = OpenRouterService(_apiKey, model: _selectedModel);
+    notifyListeners();
+  }
+
+  Future<void> setApiKey(String newApiKey) async {
+    _apiKey = newApiKey;
+    _aiService = OpenRouterService(_apiKey, model: _selectedModel);
     
-    if (_apiKey != null) {
-      _repository.setApiKey(_apiKey!, model: _selectedModel);
-    }
-    notifyListeners();
-  }
-
-  Future<void> setApiKey(String key) async {
-    _apiKey = key;
-    _repository.setApiKey(key, model: _selectedModel);
-    await _secureStorage.write(key: 'openrouter_api_key', value: key);
-    notifyListeners();
-  }
-
-  Future<void> setModel(String model) async {
-    _selectedModel = model;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('ai_model', model);
-    
-    // Update service with new model
-    if (_apiKey != null) {
-      _repository.setApiKey(_apiKey!, model: model);
-    }
-    
+    await prefs.setString('ai_api_key', _apiKey);
     notifyListeners();
-    print('🤖 AI model changed to: $model');
+  }
+
+  Future<void> setModel(String modelId) async {
+    _selectedModel = modelId;
+    _aiService = OpenRouterService(_apiKey, model: _selectedModel);
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ai_model', _selectedModel);
+    notifyListeners();
+  }
+
+  void clearLogs() {
+    _activityLog.clear();
+    notifyListeners();
+  }
+
+  Future<AISignal?> analyzeStock(String symbol) async {
+    _isAnalyzing = true;
+    _error = null;
+    _lastSignal = null;
+    notifyListeners();
+
+    try {
+      // Get historical data
+      final history = await _financeService.getHistoricalData(symbol, days: 30);
+      
+      if (history.isEmpty) {
+        throw Exception('No historical data available');
+      }
+
+      // Call AI for analysis
+      final response = await _aiService.analyzeMarket(symbol, history);
+      _lastSignal = AISignal.fromString(response);
+      
+      _addToLog('Analyzed $symbol', _lastSignal!.signal);
+      
+      return _lastSignal;
+    } catch (e) {
+      _error = e.toString();
+      _addToLog('Analysis failed for $symbol', 'ERROR');
+      return null;
+    } finally {
+      _isAnalyzing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> analyzeAndTrade(String symbol, double currentPrice, {PortfolioProvider? portfolio}) async {
+    final signal = await analyzeStock(symbol);
+    
+    if (signal != null && portfolio != null) {
+      try {
+        if (signal.signal == 'BUY' && signal.confidence > 0.6) {
+          // Calculate quantity based on risk (e.g., $1000 worth or 1% of balance)
+          final investAmount = portfolio.balance * 0.01; // 1% of balance
+          final quantity = (investAmount / currentPrice).floorToDouble();
+          
+          if (quantity >= 1) {
+            await portfolio.executeOrder(symbol, quantity, currentPrice, OrderType.buy);
+            _addToLog('Auto-bought $quantity shares of $symbol at \$${currentPrice.toStringAsFixed(2)}', 'BUY');
+          }
+        } else if (signal.signal == 'SELL' && signal.confidence > 0.6) {
+          final quantity = portfolio.getQuantity(symbol);
+          if (quantity > 0) {
+            await portfolio.executeOrder(symbol, quantity, currentPrice, OrderType.sell);
+            _addToLog('Auto-sold $quantity shares of $symbol at \$${currentPrice.toStringAsFixed(2)}', 'SELL');
+          }
+        }
+      } catch (e) {
+        _addToLog('Trade execution failed for $symbol: $e', 'ERROR');
+      }
+    }
+  }
+
+  void _addToLog(String action, String result) {
+    _activityLog.insert(0, {
+      'timestamp': DateTime.now(),
+      'action': action,
+      'result': result,
+    });
+    // Keep only last 50 entries
+    if (_activityLog.length > 50) {
+      _activityLog.removeLast();
+    }
   }
 
   Future<void> generateSystem({String? userPreferences}) async {
-    if (_apiKey == null) return;
-    
     _isAnalyzing = true;
     notifyListeners();
 
-    // Enable wake lock to keep screen on
     try {
-      await WakelockPlus.enable();
-      print('🔒 Wake lock enabled');
+      final response = await _aiService.generateTradingSystem(userPreferences: userPreferences);
+      _tradingSystem = response;
+      _addToLog('Generated new trading system${userPreferences?.isNotEmpty == true ? ' with preferences' : ''}', 'SUCCESS');
     } catch (e) {
-      print('⚠️ Failed to enable wake lock: $e');
-    }
-
-    try {
-      final system = await _repository.getTradingSystem(userPreferences: userPreferences);
-      _tradingSystem = system;
-      
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('trading_system', system);
-      
-      if (userPreferences != null && userPreferences.isNotEmpty) {
-        _log("Generated new trading system with custom preferences.");
-      } else {
-        _log("Generated new trading system.");
-      }
-    } catch (e) {
-      _log("Error generating system: $e");
+      _error = e.toString();
+      _addToLog('Failed to generate trading system', 'ERROR');
     } finally {
       _isAnalyzing = false;
-      
-      // Disable wake lock
-      try {
-        await WakelockPlus.disable();
-        print('🔓 Wake lock disabled');
-      } catch (e) {
-        print('⚠️ Failed to disable wake lock: $e');
-      }
-      
       notifyListeners();
     }
-  }
-
-  Future<void> analyzeAndTrade(String symbol, double currentPrice) async {
-    if (_apiKey == null) return;
-
-    _isAnalyzing = true;
-    notifyListeners();
-
-    // Enable wake lock to keep screen on
-    try {
-      await WakelockPlus.enable();
-      print('🔒 Wake lock enabled for analysis');
-    } catch (e) {
-      print('⚠️ Failed to enable wake lock: $e');
-    }
-
-    try {
-      _log("Analyzing $symbol...");
-      final result = await _repository.analyzeStock(symbol);
-      
-      final signal = result['signal'] as String;
-      final confidence = result['confidence'];
-      final reasoning = result['reasoning'];
-
-      _log("Analysis for $symbol: $signal (Confidence: $confidence). $reasoning");
-
-      if (confidence > 0.7) { // Threshold for action
-        if (signal == 'BUY' || signal == 'SELL') {
-          _log("Executing automated $signal order for $symbol");
-          await _portfolioProvider.placeAutomatedOrder(symbol, signal, currentPrice);
-        }
-      }
-    } catch (e) {
-      _log("Error analyzing $symbol: $e");
-    } finally {
-      _isAnalyzing = false;
-      
-      // Disable wake lock
-      try {
-        await WakelockPlus.disable();
-        print('🔓 Wake lock disabled after analysis');
-      } catch (e) {
-        print('⚠️ Failed to disable wake lock: $e');
-      }
-      
-      notifyListeners();
-    }
-  }
-
-  void _log(String message) {
-    final timestamp = DateTime.now().toString().split('.')[0];
-    _activityLog.insert(0, "[$timestamp] $message");
-    
-    // Persist log
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setStringList('ai_activity_log', _activityLog);
-    });
-    
-    notifyListeners();
   }
   
-  Future<void> clearLogs() async {
-    _activityLog.clear();
-     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('ai_activity_log');
+  void clearSignal() {
+    _lastSignal = null;
+    _error = null;
     notifyListeners();
   }
 }

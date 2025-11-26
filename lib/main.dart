@@ -20,9 +20,11 @@ class PaperTradeApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => PortfolioProvider()),
         ChangeNotifierProvider(create: (_) => WatchlistProvider()),
-        ChangeNotifierProxyProvider<PortfolioProvider, AiProvider>(
-          create: (context) => AiProvider(Provider.of<PortfolioProvider>(context, listen: false)),
-          update: (context, portfolio, previous) => previous ?? AiProvider(portfolio),
+        ChangeNotifierProvider(
+          create: (_) => AIProvider(
+            apiKey: 'YOUR_OPENROUTER_API_KEY', // TODO: Replace with actual API key
+            model: 'z-ai/glm-4.5-air:free',
+          ),
         ),
       ],
       child: MaterialApp(

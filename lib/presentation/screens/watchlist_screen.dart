@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../logic/providers/watchlist_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../widgets/custom_textfield.dart';
@@ -13,8 +14,28 @@ class WatchlistScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Watchlist'),
+        title: Consumer<WatchlistProvider>(
+          builder: (context, provider, child) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Watchlist', style: TextStyle(fontSize: 20)),
+                if (provider.lastRefresh != null)
+                  Text(
+                    'Updated: ${DateFormat('HH:mm').format(provider.lastRefresh!)}',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+              ],
+            );
+          },
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<WatchlistProvider>().fetchWatchlist();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
@@ -121,10 +142,10 @@ class WatchlistScreen extends StatelessWidget {
                                ScaffoldMessenger.of(context).showSnackBar(
                                  const SnackBar(content: Text('Requesting AI Analysis... Check AI Desk.')),
                                );
-                               // We need to access AiProvider here, but it might be better to do this in detail screen or have a direct call
+                               // We need to access AIProvider here, but it might be better to do this in detail screen or have a direct call
                                // For now, let's just navigate to detail screen where we can put the button more prominently
                                // Or actually, let's just call it if we can
-                               // Provider.of<AiProvider>(context, listen: false).analyzeAndTrade(stock.symbol, stock.price);
+                               // Provider.of<AIProvider>(context, listen: false).analyzeAndTrade(stock.symbol, stock.price);
                             },
                           ),
                         ],

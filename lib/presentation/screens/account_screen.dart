@@ -11,7 +11,7 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aiProvider = Provider.of<AiProvider>(context);
+    final aiProvider = Provider.of<AIProvider>(context);
     final portfolioProvider = Provider.of<PortfolioProvider>(context);
 
     return Scaffold(
@@ -98,7 +98,7 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildApiKeySection(BuildContext context, AiProvider provider) {
+  Widget _buildApiKeySection(BuildContext context, AIProvider provider) {
     final TextEditingController controller = TextEditingController(text: provider.apiKey);
 
     return Container(
@@ -156,7 +156,7 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModelSelector(BuildContext context, AiProvider provider) {
+  Widget _buildModelSelector(BuildContext context, AIProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -214,7 +214,7 @@ class AccountScreen extends StatelessWidget {
     return model['name']!;
   }
 
-  void _showModelPicker(BuildContext context, AiProvider provider) {
+  void _showModelPicker(BuildContext context, AIProvider provider) {
     final TextEditingController searchController = TextEditingController();
     
     showModalBottomSheet(
