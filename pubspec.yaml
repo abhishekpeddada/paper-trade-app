@@ -20,6 +20,7 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   flutter_secure_storage: ^9.2.4
   wakelock_plus: ^1.4.0
+  interactive_chart: ^0.3.6
 
 dev_dependencies:
   flutter_test:

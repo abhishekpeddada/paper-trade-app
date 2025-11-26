@@ -47,6 +47,65 @@ class YahooFinanceService {
     }
   }
 
+  // Get OHLC (candlestick) data for charting
+  Future<List<Map<String, dynamic>>> getOHLCData(String symbol, {String timeframe = '1d'}) async {
+    try {
+      // Map timeframes to Yahoo Finance parameters
+      final rangeMap = {
+        '1d': {'interval': '5m', 'range': '1d'},
+        '1w': {'interval': '1h', 'range': '5d'},
+        '1m': {'interval': '1d', 'range': '1mo'},
+        '3m': {'interval': '1d', 'range': '3mo'},
+        '6m': {'interval': '1d', 'range': '6mo'},
+        '1y': {'interval': '1d', 'range': '1y'},
+        'all': {'interval': '1wk', 'range': 'max'},
+      };
+      
+      final params = rangeMap[timeframe] ?? rangeMap['1m']!;
+      final url = '$baseUrl/$symbol?interval=${params['interval']}&range=${params['range']}';
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final result = data['chart']['result'][0];
+        final timestamps = result['timestamp'] as List<dynamic>?;
+        final indicators = result['indicators']['quote'][0];
+        final opens = indicators['open'] as List<dynamic>?;
+        final highs = indicators['high'] as List<dynamic>?;
+        final lows = indicators['low'] as List<dynamic>?;
+        final closes = indicators['close'] as List<dynamic>?;
+        final volumes = indicators['volume'] as List<dynamic>?;
+        
+        List<Map<String, dynamic>> ohlcData = [];
+        if (timestamps != null && opens != null && highs != null && lows != null && closes != null) {
+          for (int i = 0; i < timestamps.length; i++) {
+            if (opens[i] != null && highs[i] != null && lows[i] != null && closes[i] != null) {
+              ohlcData.add({
+                'date': DateTime.fromMillisecondsSinceEpoch(timestamps[i] * 1000).toIso8601String(),
+                'open': (opens[i] as num).toDouble(),
+                'high': (highs[i] as num).toDouble(),
+                'low': (lows[i] as num).toDouble(),
+                'close': (closes[i] as num).toDouble(),
+                'volume': (volumes != null && volumes[i] != null) ? (volumes[i] as num).toDouble() : 0.0,
+              });
+            }
+          }
+        }
+        return ohlcData;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching OHLC data: $e');
+      return [];
+    }
+  }
+
   Future<Stock> getStockData(String symbol, {String timeframe = '1d'}) async {
     try {
       // Map timeframes to Yahoo Finance parameters

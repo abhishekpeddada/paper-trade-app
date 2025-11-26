@@ -67,6 +67,38 @@ class OpenRouterService {
     return _callAI(prompt);
   }
 
+  Future<String> convertPineScriptToDart(String pineScriptCode) async {
+    final prompt = '''
+You are an expert in both PineScript and Dart programming. Convert the following PineScript indicator code to Dart.
+
+PineScript Code:
+```pinescript
+$pineScriptCode
+```
+
+Requirements:
+1. Create a Dart function that calculates the indicator values
+2. The function should accept List<double> for price data (close, open, high, low as needed)
+3. Return a List<double> with the indicator values (use double.nan for undefined values)
+4. Include all necessary calculations (SMA, EMA, RSI, MACD, Bollinger Bands, etc.)
+5. Use clear variable names and add comments
+6. Do NOT include any imports or package dependencies
+7. Make the function pure and stateless
+
+Output ONLY the Dart function code, nothing else. Start with the function signature.
+
+Example format:
+```dart
+List<double> calculateIndicator(List<double> closes, {int period = 14}) {
+  // Your implementation here
+  return result;
+}
+```
+''';
+
+    return _callAI(prompt);
+  }
+
   Future<String> _callAI(String prompt) async {
     try {
       final response = await http.post(

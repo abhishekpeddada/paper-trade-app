@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../logic/providers/ai_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'pinescript_screen.dart';
 
 class AiActivityScreen extends StatelessWidget {
   const AiActivityScreen({super.key});
@@ -17,6 +18,8 @@ class AiActivityScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
+          _buildPineScriptCard(context),
+          const SizedBox(height: 8),
           _buildSystemCard(context, aiProvider),
           const Divider(height: 1, color: AppTheme.surfaceColor),
           Expanded(
@@ -31,6 +34,73 @@ class AiActivityScreen extends StatelessWidget {
         icon: aiProvider.isAnalyzing 
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
             : const Icon(Icons.auto_awesome),
+      ),
+    );
+  }
+
+  Widget _buildPineScriptCard(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppTheme.accentColor.withOpacity(0.3), AppTheme.primaryColor.withOpacity(0.2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.accentColor.withOpacity(0.5)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PineScriptScreen()),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.code, color: AppTheme.accentColor, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'PineScript Converter',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Convert PineScript to Dart & plot on charts',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, color: AppTheme.accentColor, size: 16),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
