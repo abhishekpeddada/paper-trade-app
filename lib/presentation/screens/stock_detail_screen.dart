@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../logic/providers/ai_provider.dart';
 import '../../logic/providers/portfolio_provider.dart';
 import 'full_chart_screen.dart';
+import '../../core/utils/currency_helper.dart';
 
 class StockDetailScreen extends StatefulWidget {
   final Stock initialStock;
@@ -77,7 +78,7 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '\$${stock.price.toStringAsFixed(2)}',
+                      CurrencyHelper.formatPrice(stock.price, stock.symbol),
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -93,7 +94,7 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${stock.change.toStringAsFixed(2)} (${stock.changePercent.toStringAsFixed(2)}%)',
+                          '${CurrencyHelper.formatPrice(stock.change.abs(), stock.symbol)} (${stock.changePercent.toStringAsFixed(2)}%)',
                           style: TextStyle(
                             fontSize: 16,
                             color: color,

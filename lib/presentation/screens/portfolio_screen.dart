@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../logic/providers/portfolio_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../widgets/custom_card.dart';
+import '../../core/utils/currency_helper.dart';
 
 class PortfolioScreen extends StatelessWidget {
   const PortfolioScreen({super.key});
@@ -67,12 +68,12 @@ class PortfolioScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Total Value',
+                              'Total Value (INR)',
                               style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$${totalValue.toStringAsFixed(2)}',
+                              CurrencyHelper.formatInr(totalValue),
                               style: const TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
@@ -102,7 +103,7 @@ class PortfolioScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '${isPLPositive ? '+' : ''}\$${totalPL.toStringAsFixed(2)}',
+                                  '${isPLPositive ? '+' : ''}${CurrencyHelper.formatInr(totalPL)}',
                                   style: TextStyle(
                                     color: isPLPositive ? AppTheme.primaryColor : AppTheme.secondaryColor,
                                     fontSize: 18,
@@ -119,12 +120,12 @@ class PortfolioScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Cash: \$${provider.balance.toStringAsFixed(2)}',
+                          'Cash: ${CurrencyHelper.formatInr(provider.balance)}',
                           style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                         ),
                         if (positions.isNotEmpty)
                           Text(
-                            'Invested: \$${(totalValue - provider.balance).toStringAsFixed(2)}',
+                            'Invested: ${CurrencyHelper.formatInr(totalValue - provider.balance)}',
                             style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                           ),
                       ],
@@ -174,7 +175,7 @@ class PortfolioScreen extends StatelessWidget {
                                         Padding(
                                           padding: const EdgeInsets.only(top: 4),
                                           child: Text(
-                                            '\$${currentPrice.toStringAsFixed(2)}',
+                                            CurrencyHelper.formatPrice(currentPrice, position.symbol),
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w500,
@@ -189,7 +190,7 @@ class PortfolioScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      'Avg: \$${position.averagePrice.toStringAsFixed(2)}',
+                                      'Avg: ${CurrencyHelper.formatPrice(position.averagePrice, position.symbol)}',
                                       style: const TextStyle(
                                         fontSize: 13,
                                         color: AppTheme.textSecondary,
@@ -198,7 +199,7 @@ class PortfolioScreen extends StatelessWidget {
                                     const SizedBox(height: 4),
                                     if (currentPrice != null)
                                       Text(
-                                        '${isPLPositive ? '+' : ''}\$${pl.toStringAsFixed(2)} (${isPLPositive ? '+' : ''}${plPercent.toStringAsFixed(2)}%)',
+                                        '${isPLPositive ? '+' : ''}${CurrencyHelper.formatInr(pl)} (${isPLPositive ? '+' : ''}${plPercent.toStringAsFixed(2)}%)',
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
@@ -257,22 +258,24 @@ class PortfolioScreen extends StatelessWidget {
             const SizedBox(height: 24),
             _buildDetailRow('Quantity', '${position.quantity.toStringAsFixed(2)} shares'),
             const SizedBox(height: 12),
-            _buildDetailRow('Average Price', '\$${position.averagePrice.toStringAsFixed(2)}'),
+            _buildDetailRow('Average Price', CurrencyHelper.formatPrice(position.averagePrice, position.symbol)),
             const SizedBox(height: 12),
             if (currentPrice != null) ...[
-              _buildDetailRow('Current Price', '\$${currentPrice.toStringAsFixed(2)}'),
+              _buildDetailRow('Current Price', CurrencyHelper.formatPrice(currentPrice, position.symbol)),
               const SizedBox(height: 12),
             ],
-            _buildDetailRow('Cost Basis', '\$${(position.quantity * position.averagePrice).toStringAsFixed(2)}'),
+            // Show Cost Basis in INR as it's the actual invested amount
+            _buildDetailRow('Cost Basis (INR)', CurrencyHelper.formatInr(CurrencyHelper.convertToInr(position.averagePrice * position.quantity, position.symbol))),
             if (currentPrice != null) ...[
               const SizedBox(height: 12),
-              _buildDetailRow('Current Value', '\$${(position.quantity * currentPrice).toStringAsFixed(2)}'),
+              // Show Current Value in INR
+              _buildDetailRow('Current Value (INR)', CurrencyHelper.formatInr(CurrencyHelper.convertToInr(currentPrice * position.quantity, position.symbol))),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'P&L',
+                    'P&L (INR)',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppTheme.textSecondary,
@@ -282,7 +285,7 @@ class PortfolioScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${isPLPositive ? '+' : ''}\$${pl.toStringAsFixed(2)}',
+                        '${isPLPositive ? '+' : ''}${CurrencyHelper.formatInr(pl)}',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

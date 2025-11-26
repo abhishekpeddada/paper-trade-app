@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../data/models/ohlc_data.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_helper.dart';
 
 class FullInteractiveChartWidget extends StatefulWidget {
   final List<OHLCData> ohlcData;
+  final String symbol;
 
   const FullInteractiveChartWidget({
     super.key,
     required this.ohlcData,
+    required this.symbol,
   });
 
   @override
@@ -22,6 +25,8 @@ class _FullInteractiveChartWidgetState extends State<FullInteractiveChartWidget>
   double _baseOffsetX = 0.0;
   Offset? _touchPosition;
   double _lastFocalX = 0.0;
+
+  String get _currencySymbol => CurrencyHelper.getCurrencySymbol(widget.symbol);
 
   @override
   Widget build(BuildContext context) {
@@ -58,78 +63,41 @@ class _FullInteractiveChartWidgetState extends State<FullInteractiveChartWidget>
           },
           onScaleUpdate: (details) {
             setState(() {
-              // Handle Zoom
-              // Only zoom if scale changed significantly to avoid jitter during panning
               if (details.scale != 1.0) {
                 final newScale = (_baseScale * details.scale).clamp(0.5, 5.0);
-                
-                // Adjust offset to zoom around focal point
                 final focalPoint = details.localFocalPoint.dx;
                 final relativeFocal = focalPoint - _offsetX;
                 final newRelativeFocal = relativeFocal * (newScale / _scale);
                 _offsetX += relativeFocal - newRelativeFocal;
-                
                 _scale = newScale;
               }
 
-              // Handle Pan
-              // Calculate delta since start of gesture
               final deltaX = details.localFocalPoint.dx - _lastFocalX;
               _offsetX += deltaX;
               _lastFocalX = details.localFocalPoint.dx;
 
-              // Constrain panning
               final size = context.size;
               if (size != null) {
                 final candleWidth = 8.0 * _scale;
                 final candleSpacing = 2.0 * _scale;
                 final totalContentWidth = widget.ohlcData.length * (candleWidth + candleSpacing);
-                final minOffset = size.width - totalContentWidth - 50; // Allow some overscroll
-                final maxOffset = 50.0; // Allow some overscroll
+                final minOffset = size.width - totalContentWidth - 50;
+                final maxOffset = 50.0;
                 
                 if (totalContentWidth > size.width) {
                   _offsetX = _offsetX.clamp(minOffset, maxOffset);
                 } else {
-                  // If content fits, center or align left, don't allow pan
                   _offsetX = 0;
                 }
               }
             });
           },
-          
-          // Tap to show crosshair
-          onTapDown: (details) {
-            setState(() {
-              _touchPosition = details.localPosition;
-            });
-          },
-          onTapUp: (_) {
-            setState(() {
-              _touchPosition = null;
-            });
-          },
-          onTapCancel: () {
-            setState(() {
-              _touchPosition = null;
-            });
-          },
-          
-          // Long press for crosshair
-          onLongPressStart: (details) {
-            setState(() {
-              _touchPosition = details.localPosition;
-            });
-          },
-          onLongPressMoveUpdate: (details) {
-            setState(() {
-              _touchPosition = details.localPosition;
-            });
-          },
-          onLongPressEnd: (_) {
-            setState(() {
-              _touchPosition = null;
-            });
-          },
+          onTapDown: (details) => setState(() => _touchPosition = details.localPosition),
+          onTapUp: (_) => setState(() => _touchPosition = null),
+          onTapCancel: () => setState(() => _touchPosition = null),
+          onLongPressStart: (details) => setState(() => _touchPosition = details.localPosition),
+          onLongPressMoveUpdate: (details) => setState(() => _touchPosition = details.localPosition),
+          onLongPressEnd: (_) => setState(() => _touchPosition = null),
           
           child: CustomPaint(
             painter: CandlestickChartPainter(
@@ -137,6 +105,7 @@ class _FullInteractiveChartWidgetState extends State<FullInteractiveChartWidget>
               scale: _scale,
               offsetX: _offsetX,
               touchPosition: _touchPosition,
+              currencySymbol: _currencySymbol,
             ),
             child: Container(),
           ),
@@ -151,19 +120,20 @@ class CandlestickChartPainter extends CustomPainter {
   final double scale;
   final double offsetX;
   final Offset? touchPosition;
+  final String currencySymbol;
 
   CandlestickChartPainter({
     required this.ohlcData,
     required this.scale,
     required this.offsetX,
     this.touchPosition,
+    required this.currencySymbol,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (ohlcData.isEmpty) return;
 
-    // Calculate price range
     double minPrice = ohlcData.map((d) => d.low).reduce(math.min);
     double maxPrice = ohlcData.map((d) => d.high).reduce(math.max);
     final priceRange = maxPrice - minPrice;
@@ -171,16 +141,13 @@ class CandlestickChartPainter extends CustomPainter {
     minPrice -= padding;
     maxPrice += padding;
 
-    // Chart dimensions
-    final chartHeight = size.height - 60; // Reserve space for labels
+    final chartHeight = size.height - 60;
     final candleWidth = 8.0 * scale;
     final candleSpacing = 2.0 * scale;
     final totalCandleWidth = candleWidth + candleSpacing;
 
-    // Draw grid lines
     _drawGridLines(canvas, size, minPrice, maxPrice, chartHeight);
 
-    // Draw candles
     for (int i = 0; i < ohlcData.length; i++) {
       final candle = ohlcData[i];
       final x = offsetX + i * totalCandleWidth + candleWidth / 2;
@@ -195,13 +162,11 @@ class CandlestickChartPainter extends CustomPainter {
       final isGreen = candle.close >= candle.open;
       final color = isGreen ? AppTheme.primaryColor : AppTheme.secondaryColor;
 
-      // Draw wick (high-low line)
       final wickPaint = Paint()
         ..color = color.withValues(alpha: 0.7)
         ..strokeWidth = 1.5;
       canvas.drawLine(Offset(x, highY), Offset(x, lowY), wickPaint);
 
-      // Draw body (open-close rectangle)
       final bodyPaint = Paint()
         ..color = color
         ..style = PaintingStyle.fill;
@@ -214,12 +179,10 @@ class CandlestickChartPainter extends CustomPainter {
       canvas.drawRect(bodyRect, bodyPaint);
     }
 
-    // Draw crosshair if touching
     if (touchPosition != null) {
       _drawCrosshair(canvas, size, touchPosition!, minPrice, maxPrice, chartHeight, totalCandleWidth);
     }
 
-    // Draw price labels
     _drawPriceLabels(canvas, size, minPrice, maxPrice, chartHeight);
   }
 
@@ -239,21 +202,9 @@ class CandlestickChartPainter extends CustomPainter {
       ..color = AppTheme.accentColor.withValues(alpha: 0.8)
       ..strokeWidth = 1.5;
 
-    // Draw vertical line
-    canvas.drawLine(
-      Offset(touch.dx, 0),
-      Offset(touch.dx, chartHeight),
-      crosshairPaint,
-    );
+    canvas.drawLine(Offset(touch.dx, 0), Offset(touch.dx, chartHeight), crosshairPaint);
+    canvas.drawLine(Offset(0, touch.dy), Offset(size.width, touch.dy), crosshairPaint);
 
-    // Draw horizontal line
-    canvas.drawLine(
-      Offset(0, touch.dy),
-      Offset(size.width, touch.dy),
-      crosshairPaint,
-    );
-
-    // Find which candle is touched
     final candleIndex = ((touch.dx - offsetX) / totalCandleWidth).floor();
     if (candleIndex >= 0 && candleIndex < ohlcData.length) {
       final candle = ohlcData[candleIndex];
@@ -269,25 +220,22 @@ class CandlestickChartPainter extends CustomPainter {
     );
 
     final lines = [
-      'O: \$${candle.open.toStringAsFixed(2)}',
-      'H: \$${candle.high.toStringAsFixed(2)}',
-      'L: \$${candle.low.toStringAsFixed(2)}',
-      'C: \$${candle.close.toStringAsFixed(2)}',
+      'O: $currencySymbol${candle.open.toStringAsFixed(2)}',
+      'H: $currencySymbol${candle.high.toStringAsFixed(2)}',
+      'L: $currencySymbol${candle.low.toStringAsFixed(2)}',
+      'C: $currencySymbol${candle.close.toStringAsFixed(2)}',
     ];
 
-    // Calculate box size
     const lineHeight = 16.0;
     const padding = 8.0;
     const boxWidth = 150.0;
     final boxHeight = lines.length * lineHeight + padding * 2;
 
-    // Position box to avoid edges
     var boxX = touch.dx + 10;
     var boxY = touch.dy - boxHeight - 10;
     if (boxX + boxWidth > size.width) boxX = touch.dx - boxWidth - 10;
     if (boxY < 0) boxY = touch.dy + 10;
 
-    // Draw box background
     final boxPaint = Paint()
       ..color = AppTheme.backgroundColor.withValues(alpha: 0.95);
     final boxRect = RRect.fromRectAndRadius(
@@ -296,7 +244,6 @@ class CandlestickChartPainter extends CustomPainter {
     );
     canvas.drawRRect(boxRect, boxPaint);
 
-    // Draw text
     for (int i = 0; i < lines.length; i++) {
       final textPainter = TextPainter(
         text: TextSpan(text: lines[i], style: textStyle),
@@ -318,7 +265,7 @@ class CandlestickChartPainter extends CustomPainter {
       final y = i * chartHeight / 4;
 
       final textPainter = TextPainter(
-        text: TextSpan(text: '\$${price.toStringAsFixed(2)}', style: textStyle),
+        text: TextSpan(text: '$currencySymbol${price.toStringAsFixed(2)}', style: textStyle),
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
@@ -335,6 +282,7 @@ class CandlestickChartPainter extends CustomPainter {
     return oldDelegate.scale != scale ||
         oldDelegate.offsetX != offsetX ||
         oldDelegate.touchPosition != touchPosition ||
-        oldDelegate.ohlcData != ohlcData;
+        oldDelegate.ohlcData != ohlcData ||
+        oldDelegate.currencySymbol != currencySymbol;
   }
 }

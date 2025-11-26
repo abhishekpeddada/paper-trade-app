@@ -5,10 +5,11 @@ import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/trade_models.dart';
 import '../../data/repositories/stock_repository.dart';
+import '../../core/utils/currency_helper.dart';
 
 class PortfolioProvider extends ChangeNotifier {
   final StockRepository _repository = StockRepository();
-  double _balance = 100000.0; // Initial virtual cash
+  double _balance = 100000.0; // Initial virtual cash in INR
   List<Position> _positions = [];
   List<Order> _orders = [];
   Map<String, double> _currentPrices = {}; // Track current prices for P&L
@@ -110,19 +111,27 @@ class PortfolioProvider extends ChangeNotifier {
   }
 
   void _buy(String symbol, double quantity, double price) {
-    final totalCost = quantity * price;
-    if (totalCost > _balance) {
+    // Calculate cost in native currency
+    final nativeCost = quantity * price;
+    
+    // Convert to INR for balance deduction
+    final inrCost = CurrencyHelper.convertToInr(nativeCost, symbol);
+
+    if (inrCost > _balance) {
       throw Exception('Insufficient funds');
     }
 
-    _balance -= totalCost;
+    _balance -= inrCost;
 
-    // Update or add position
+    // Update or add position (store averagePrice in NATIVE currency)
     final index = _positions.indexWhere((p) => p.symbol == symbol);
     if (index != -1) {
       final position = _positions[index];
       final newQuantity = position.quantity + quantity;
-      final newAvgPrice = ((position.quantity * position.averagePrice) + totalCost) / newQuantity;
+      
+      // Weighted average calculation needs to be in native currency
+      final currentNativeCostBasis = position.quantity * position.averagePrice;
+      final newAvgPrice = (currentNativeCostBasis + nativeCost) / newQuantity;
       
       position.quantity = newQuantity;
       position.averagePrice = newAvgPrice;
@@ -145,8 +154,13 @@ class PortfolioProvider extends ChangeNotifier {
       throw Exception('Insufficient quantity');
     }
 
-    final totalProceeds = quantity * price;
-    _balance += totalProceeds;
+    // Calculate proceeds in native currency
+    final nativeProceeds = quantity * price;
+    
+    // Convert to INR for balance addition
+    final inrProceeds = CurrencyHelper.convertToInr(nativeProceeds, symbol);
+    
+    _balance += inrProceeds;
 
     position.quantity -= quantity;
     if (position.quantity <= 0) {
@@ -199,18 +213,21 @@ class PortfolioProvider extends ChangeNotifier {
     }
   }
 
-  // Calculate profit/loss for a position
+  // Calculate profit/loss for a position in INR
   double getProfitLoss(Position position) {
     if (!_currentPrices.containsKey(position.symbol)) {
       return 0.0;
     }
-    final currentPrice = _currentPrices[position.symbol]!;
-    final currentValue = currentPrice * position.quantity;
-    final costBasis = position.averagePrice * position.quantity;
-    return currentValue - costBasis;
+    final currentPriceNative = _currentPrices[position.symbol]!;
+    
+    // Value in INR
+    final currentValueInr = CurrencyHelper.convertToInr(currentPriceNative * position.quantity, position.symbol);
+    final costBasisInr = CurrencyHelper.convertToInr(position.averagePrice * position.quantity, position.symbol);
+    
+    return currentValueInr - costBasisInr;
   }
 
-  // Calculate profit/loss percentage
+  // Calculate profit/loss percentage (Currency independent)
   double getProfitLossPercent(Position position) {
     if (!_currentPrices.containsKey(position.symbol)) {
       return 0.0;
@@ -219,20 +236,25 @@ class PortfolioProvider extends ChangeNotifier {
     return ((currentPrice - position.averagePrice) / position.averagePrice) * 100;
   }
 
-  // Get total portfolio value
+  // Get total portfolio value in INR
   double getTotalPortfolioValue() {
-    double totalValue = _balance;
+    double totalValueInr = _balance; // Balance is already in INR
+    
     for (var position in _positions) {
+      double positionValueNative;
       if (_currentPrices.containsKey(position.symbol)) {
-        totalValue += _currentPrices[position.symbol]! * position.quantity;
+        positionValueNative = _currentPrices[position.symbol]! * position.quantity;
       } else {
-        totalValue += position.averagePrice * position.quantity; // Use avg price if current not available
+        positionValueNative = position.averagePrice * position.quantity;
       }
+      
+      // Convert position value to INR
+      totalValueInr += CurrencyHelper.convertToInr(positionValueNative, position.symbol);
     }
-    return totalValue;
+    return totalValueInr;
   }
 
-  // Get total P&L
+  // Get total P&L in INR
   double getTotalProfitLoss() {
     double totalPL = 0.0;
     for (var position in _positions) {

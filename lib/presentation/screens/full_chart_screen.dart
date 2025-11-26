@@ -252,6 +252,7 @@ class _FullChartScreenState extends State<FullChartScreen> {
           Expanded(
             child: FullInteractiveChartWidget(
               ohlcData: _chartData,
+              symbol: widget.symbol,
             ),
           ),
           

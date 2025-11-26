@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/custom_card.dart';
 import 'stock_detail_screen.dart';
+import '../../core/utils/currency_helper.dart';
 
 class WatchlistScreen extends StatelessWidget {
   const WatchlistScreen({super.key});
@@ -103,7 +104,7 @@ class WatchlistScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'NSE', // Placeholder exchange
+                            CurrencyHelper.isIndianStock(stock.symbol) ? 'NSE' : 'NASDAQ',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppTheme.textSecondary.withValues(alpha: 0.7),
@@ -117,7 +118,7 @@ class WatchlistScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '\$${stock.price.toStringAsFixed(2)}',
+                                CurrencyHelper.formatPrice(stock.price, stock.symbol),
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -126,7 +127,7 @@ class WatchlistScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${isPositive ? '+' : ''}${stock.change.toStringAsFixed(2)} (${stock.changePercent.toStringAsFixed(2)}%)',
+                                '${isPositive ? '+' : ''}${CurrencyHelper.formatPrice(stock.change.abs(), stock.symbol)} (${stock.changePercent.toStringAsFixed(2)}%)',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: isPositive ? AppTheme.primaryColor : AppTheme.secondaryColor,

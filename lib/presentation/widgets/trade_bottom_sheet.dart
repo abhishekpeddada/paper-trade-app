@@ -8,6 +8,7 @@ import '../../data/models/trade_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../../core/utils/currency_helper.dart';
 
 class TradeBottomSheet extends StatefulWidget {
   final Stock stock;
@@ -83,7 +84,7 @@ class _TradeBottomSheetState extends State<TradeBottomSheet> {
                 ),
               ),
               Text(
-                '\$${widget.stock.price.toStringAsFixed(2)}',
+                CurrencyHelper.formatPrice(widget.stock.price, widget.stock.symbol),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -207,7 +208,7 @@ class _TradeBottomSheetState extends State<TradeBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Estimated Total',
+                        'Estimated Total (INR)',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
@@ -215,13 +216,21 @@ class _TradeBottomSheetState extends State<TradeBottomSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '\$${_estimatedTotal.toStringAsFixed(2)}',
+                        CurrencyHelper.formatInr(CurrencyHelper.convertToInr(_estimatedTotal, widget.stock.symbol)),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
+                      if (!CurrencyHelper.isIndianStock(widget.stock.symbol))
+                        Text(
+                          '(${CurrencyHelper.formatPrice(_estimatedTotal, widget.stock.symbol)})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -232,7 +241,7 @@ class _TradeBottomSheetState extends State<TradeBottomSheet> {
           Consumer<PortfolioProvider>(
             builder: (context, provider, child) {
               return Text(
-                'Available Balance: \$${provider.balance.toStringAsFixed(2)}',
+                'Available Balance: ${CurrencyHelper.formatInr(provider.balance)}',
                 style: const TextStyle(color: AppTheme.textSecondary),
               );
             },
