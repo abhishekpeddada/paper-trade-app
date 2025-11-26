@@ -9,6 +9,7 @@ import '../../data/models/trade_models.dart';
 import 'package:provider/provider.dart';
 import '../../logic/providers/ai_provider.dart';
 import '../../logic/providers/portfolio_provider.dart';
+import 'full_chart_screen.dart';
 
 class StockDetailScreen extends StatefulWidget {
   final Stock initialStock;
@@ -124,6 +125,44 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Price Chart',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FullChartScreen(
+                          symbol: stock.symbol,
+                          companyName: stock.name,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.fullscreen, size: 18, color: AppTheme.accentColor),
+                  label: Text(
+                    'Full Chart',
+                    style: TextStyle(
+                      color: AppTheme.accentColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           _buildTimeframeSelector(),
           const SizedBox(height: 8),
           SizedBox(
