@@ -3,6 +3,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/ohlc_data.dart';
 import '../../data/services/yahoo_finance_service.dart';
 import '../widgets/candlestick_chart_widget.dart';
+import '../widgets/full_interactive_chart_widget.dart';
 
 class FullChartScreen extends StatefulWidget {
   final String symbol;
@@ -247,10 +248,24 @@ class _FullChartScreenState extends State<FullChartScreen> {
           ),
           const SizedBox(height: 8),
           
-          // Chart
+          // Chart with zoom, pan, and crosshair
           Expanded(
-            child: CandlestickChartWidget(
+            child: FullInteractiveChartWidget(
               ohlcData: _chartData,
+            ),
+          ),
+          
+          // Interaction hints
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Pinch to zoom • Drag to pan • Tap to see values',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
