@@ -4,6 +4,7 @@ import '../../logic/providers/portfolio_provider.dart';
 import '../../logic/providers/ai_provider.dart';
 import '../../data/services/openrouter_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_helper.dart';
 import '../widgets/custom_button.dart';
 
 class AccountScreen extends StatelessWidget {
