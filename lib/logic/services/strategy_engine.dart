@@ -256,18 +256,36 @@ class StrategyEngine {
 
     final k = 2 / (period + 1);
 
-    // Start with SMA
-    double sum = 0;
-    for (int j = 0; j < period; j++) {
-      if (!data[period - 1 - j].isNaN) {
-        sum += data[period - 1 - j];
+    // Find the first index where we have enough consecutive non-NaN values
+    int startIndex = -1;
+    for (int i = 0; i <= data.length - period; i++) {
+      bool hasEnoughData = true;
+      for (int j = 0; j < period; j++) {
+        if (data[i + j].isNaN) {
+          hasEnoughData = false;
+          break;
+        }
+      }
+      if (hasEnoughData) {
+        startIndex = i;
+        break;
       }
     }
-    ema[period - 1] = sum / period;
-
-    for (int i = period; i < data.length; i++) {
-      if (!data[i].isNaN && !ema[i - 1].isNaN) {
-        ema[i] = (data[i] - ema[i - 1]) * k + ema[i - 1];
+    
+    // If we found a valid starting point, calculate SMA and then EMA
+    if (startIndex >= 0) {
+      // Calculate initial SMA
+      double sum = 0;
+      for (int j = 0; j < period; j++) {
+        sum += data[startIndex + j];
+      }
+      ema[startIndex + period - 1] = sum / period;
+      
+      // Calculate EMA for remaining values
+      for (int i = startIndex + period; i < data.length; i++) {
+        if (!data[i].isNaN && !ema[i - 1].isNaN) {
+          ema[i] = (data[i] - ema[i - 1]) * k + ema[i - 1];
+        }
       }
     }
 

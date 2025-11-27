@@ -47,6 +47,80 @@ class OpenRouterService {
     return _callAI(prompt);
   }
 
+  Future<String> analyzeMarketWithIndicators(
+    String symbol, 
+    List<Map<String, dynamic>> history,
+    Map<String, dynamic> indicators,
+  ) async {
+    // Limit history to last 30 days
+    final recentHistory = history.length > 30 ? history.sublist(history.length - 30) : history;
+    
+    // Extract indicator values
+    final psar = indicators['psar'];
+    final rsi = indicators['rsi'];
+    final macd = indicators['macd'];
+    final bb = indicators['bollingerBands'];
+    
+    // Determine currency symbol
+    String currencySymbol = '\$';
+    if (symbol.endsWith('.NS') || symbol.endsWith('.BO')) {
+      currencySymbol = '₹';
+    }
+    
+    final prompt = '''
+You are an expert stock analyst. Analyze $symbol using technical indicators and provide a detailed trading recommendation.
+
+PRICE DATA (Last 30 Days):
+${json.encode(recentHistory)}
+
+TECHNICAL INDICATORS (Current Values):
+
+PSAR (Parabolic SAR):
+- Value: $currencySymbol${psar?['value']?.toStringAsFixed(2) ?? 'N/A'}
+- Signal: ${psar?['signal'] ?? 'N/A'}
+- Trend: ${psar?['isBullish'] == true ? 'Bullish (price above PSAR)' : 'Bearish (price below PSAR)'}
+
+RSI (14-period):
+- Value: ${rsi?['value']?.toStringAsFixed(1) ?? 'N/A'}
+- Signal: ${rsi?['signal'] ?? 'N/A'}
+- Status: ${rsi?['overbought'] == true ? 'Overbought (>70)' : (rsi?['oversold'] == true ? 'Oversold (<30)' : 'Neutral')}
+
+MACD (12,26,9):
+- Histogram: ${macd?['histogram'] > 0 ? '+' : ''}${macd?['histogram']?.toStringAsFixed(2) ?? 'N/A'}
+- Signal: ${macd?['signal'] ?? 'N/A'}
+- Trend: ${macd?['isBullish'] == true ? 'Bullish crossover' : 'Bearish crossover'}
+
+Bollinger Bands:
+- Upper: $currencySymbol${bb?['upper']?.toStringAsFixed(2) ?? 'N/A'}
+- Middle: $currencySymbol${bb?['middle']?.toStringAsFixed(2) ?? 'N/A'}
+- Lower: $currencySymbol${bb?['lower']?.toStringAsFixed(2) ?? 'N/A'}
+- Position: ${bb?['position'] ?? 'N/A'}
+
+REQUIREMENTS:
+1. Analyze ALL indicators (PSAR, RSI, MACD, Bollinger Bands)
+2. Identify agreements and conflicts between signals
+3. Consider overbought/oversold conditions
+4. Evaluate trend strength and momentum
+5. Provide DETAILED reasoning (3-5 sentences minimum)
+6. Use $currencySymbol for all price references in your reasoning
+
+Output format: JSON only, no markdown. Fields:
+- signal: "BUY", "SELL", or "HOLD"
+- confidence: 0.0 to 1.0 (based on indicator agreement)
+- reasoning: Detailed multi-sentence explanation covering:
+  * What each indicator is showing
+  * How they agree or conflict
+  * Why you chose this signal
+  * Any warnings or caveats
+- stopLoss: Suggested stop loss price (use PSAR value for active trades)
+- takeProfit: Suggested take profit price
+
+Be thorough in your reasoning - explain your thinking process!
+''';
+
+    return _callAI(prompt);
+  }
+
   Future<String> generateTradingSystem({String? userPreferences}) async {
     String prompt = '''
     Generate a robust algorithmic trading system description based on technical analysis.

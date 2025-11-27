@@ -126,6 +126,37 @@ class AIProvider extends ChangeNotifier {
     }
   }
 
+  Future<AISignal?> analyzeStockWithIndicators(String symbol, Map<String, dynamic> indicators) async {
+    _isAnalyzing = true;
+    _error = null;
+    _lastSignal = null;
+    notifyListeners();
+
+    try {
+      // Get historical data
+      final history = await _financeService.getHistoricalData(symbol, days: 30);
+      
+      if (history.isEmpty) {
+        throw Exception('No historical data available');
+      }
+
+      // Call AI for analysis with indicators
+      final response = await _aiService.analyzeMarketWithIndicators(symbol, history, indicators);
+      _lastSignal = AISignal.fromString(response);
+      
+      _addToLog('Analyzed $symbol with indicators', _lastSignal!.signal);
+      
+      return _lastSignal;
+    } catch (e) {
+      _error = e.toString();
+      _addToLog('Analysis failed for $symbol', 'ERROR');
+      return null;
+    } finally {
+      _isAnalyzing = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> analyzeAndTrade(String symbol, double currentPrice, {PortfolioProvider? portfolio}) async {
     final signal = await analyzeStock(symbol);
     

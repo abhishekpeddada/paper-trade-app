@@ -6,6 +6,7 @@ import '../../logic/providers/portfolio_provider.dart';
 import '../../logic/providers/watchlist_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter/services.dart';
 import 'strategy_analyzer_screen.dart';
 
 class AiActivityScreen extends StatelessWidget {
@@ -121,6 +122,66 @@ class AiActivityScreen extends StatelessWidget {
   Widget _buildConsole(BuildContext context) {
     return Consumer<AutoTradingProvider>(
       builder: (context, provider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Console header with clear button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Analysis Logs',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (provider.logs.isNotEmpty)
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => _copyLogsToClipboard(context, provider.logs),
+                          icon: const Icon(Icons.copy, size: 18),
+                          tooltip: 'Copy Logs',
+                          color: AppTheme.textSecondary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          onPressed: () => _showFullscreenLogs(context, provider.logs),
+                          icon: const Icon(Icons.fullscreen, size: 18),
+                          tooltip: 'Fullscreen',
+                          color: AppTheme.textSecondary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 12),
+                        TextButton.icon(
+                          onPressed: () => provider.clearLogs(),
+                          icon: const Icon(Icons.delete_outline, size: 16),
+                          label: const Text('Clear'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppTheme.surfaceColor),
+            Expanded(child: _buildConsoleContent(provider)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildConsoleContent(AutoTradingProvider provider) {
         if (provider.logs.isEmpty) {
           return Center(
             child: Column(
@@ -139,6 +200,7 @@ class AiActivityScreen extends StatelessWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
+          reverse: false, // Show oldest first (chronological order)
           itemCount: provider.logs.length,
           itemBuilder: (context, index) {
             final log = provider.logs[index];
@@ -164,9 +226,7 @@ class AiActivityScreen extends StatelessWidget {
             );
           },
         );
-      },
-    );
-  }
+      }
 
   Widget _buildPineScriptCard(BuildContext context) {
     return Container(
@@ -356,4 +416,66 @@ class AiActivityScreen extends StatelessWidget {
     );
   }
 
+  void _copyLogsToClipboard(BuildContext context, List<String> logs) {
+    final allLogs = logs.join('\n');
+    Clipboard.setData(ClipboardData(text: allLogs));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Logs copied to clipboard'),
+        duration: Duration(seconds: 2),
+        backgroundColor: AppTheme.primaryColor,
+      ),
+    );
+  }
+
+  void _showFullscreenLogs(BuildContext context, List<String> logs) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          appBar: AppBar(
+            title: const Text('Analysis Logs'),
+            actions: [
+              IconButton(
+                onPressed: () => _copyLogsToClipboard(context, logs),
+                icon: const Icon(Icons.copy),
+                tooltip: 'Copy All',
+              ),
+            ],
+          ),
+          body: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: logs.length,
+            itemBuilder: (context, index) {
+              final log = logs[index];
+              final isError = log.contains('Error') || log.contains('failed') || log.contains('❌');
+              final isTrade = log.contains('Trade executed') || log.contains('💰');
+              final isSignal = log.contains('BUY') || log.contains('SELL');
+              final isHeader = log.contains('╔') || log.contains('║') || log.contains('╚');
+
+              Color color = AppTheme.textSecondary;
+              if (isError) color = AppTheme.secondaryColor;
+              if (isTrade) color = AppTheme.primaryColor;
+              if (isSignal) color = Colors.white;
+              if (isHeader) color = AppTheme.accentColor;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: SelectableText(
+                  log,
+                  style: TextStyle(
+                    color: color,
+                    fontFamily: 'Monospace',
+                    fontSize: 13,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
