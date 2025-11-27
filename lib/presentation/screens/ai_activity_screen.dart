@@ -35,14 +35,6 @@ class AiActivityScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: aiProvider.isAnalyzing ? null : () => _showPreferencesDialog(context, aiProvider),
-        backgroundColor: AppTheme.accentColor,
-        label: Text(aiProvider.isAnalyzing ? 'Analyzing...' : 'Generate New System'),
-        icon: aiProvider.isAnalyzing 
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-            : const Icon(Icons.auto_awesome),
-      ),
     );
   }
 
@@ -310,24 +302,57 @@ class AiActivityScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Current Trading System',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
+            // Header with action buttons
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.psychology, color: AppTheme.accentColor.withValues(alpha: 0.7), size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'AI Trading System',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                   ),
-                ),
-                if (provider.apiKey == null)
-                  const Text(
-                    'API Key Required',
-                    style: TextStyle(color: AppTheme.secondaryColor, fontSize: 12),
+                  // Enlarge button
+                  IconButton(
+                    onPressed: () => _showFullscreenSystem(context, provider.tradingSystem),
+                    icon: const Icon(Icons.fullscreen, size: 20),
+                    tooltip: 'Fullscreen',
+                    color: AppTheme.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-              ],
+                  const SizedBox(width: 12),
+                  // Clear button
+                  IconButton(
+                    onPressed: () => _confirmClearSystem(context, provider),
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    tooltip: 'Clear System',
+                    color: AppTheme.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 12),
+                  // Generate button
+                  IconButton(
+                    onPressed: () => _showPreferencesDialog(context, provider),
+                    icon: const Icon(Icons.refresh, size: 20),
+                    tooltip: 'Generate New',
+                    color: AppTheme.accentColor,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const Divider(height: 1, color: AppTheme.surfaceColor),
+            // System content
             Expanded(
               child: SingleChildScrollView(
                 child: MarkdownBody(
@@ -475,6 +500,101 @@ class AiActivityScreen extends StatelessWidget {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  void _showFullscreenSystem(BuildContext context, String system) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          appBar: AppBar(
+            title: const Text('AI Trading System'),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: system));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('System copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.copy),
+                tooltip: 'Copy System',
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: MarkdownBody(
+              data: system,
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, height: 1.5),
+                h1: const TextStyle(color: AppTheme.primaryColor, fontSize: 20, fontWeight: FontWeight.bold),
+                h2: const TextStyle(color: AppTheme.primaryColor, fontSize: 18, fontWeight: FontWeight.bold),
+                h3: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                strong: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                listBullet: const TextStyle(color: AppTheme.accentColor),
+                code: TextStyle(
+                  backgroundColor: AppTheme.surfaceColor,
+                  color: AppTheme.accentColor,
+                  fontFamily: 'Monospace',
+                ),
+                codeblockDecoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmClearSystem(BuildContext context, AIProvider provider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: const Text(
+          'Clear Trading System?',
+          style: TextStyle(color: AppTheme.textPrimary),
+        ),
+        content: const Text(
+          'This will delete your current trading system. You can generate a new one anytime.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              provider.clearTradingSystem();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Trading system cleared'),
+                  duration: Duration(seconds: 2),
+                  backgroundColor: AppTheme.accentColor,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.secondaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clear'),
+          ),
+        ],
       ),
     );
   }

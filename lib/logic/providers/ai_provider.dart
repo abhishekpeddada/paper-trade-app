@@ -224,4 +224,10 @@ class AIProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  void clearTradingSystem() {
+    _tradingSystem = '# Trading System\n\nNo trading system generated yet.\n\nClick "Generate New System" to create one.';
+    _saveState();
+    notifyListeners();
+  }
 }
