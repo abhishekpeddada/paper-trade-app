@@ -52,13 +52,31 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
     _minVisibleIndex = (_maxVisibleIndex - 50).clamp(0, _maxVisibleIndex);
   }
 
+  void _zoomIn() {
+    setState(() {
+      final center = (_minVisibleIndex + _maxVisibleIndex) / 2;
+      final newRange = ((_maxVisibleIndex - _minVisibleIndex) * 0.7).clamp(10.0, widget.ohlcData.length.toDouble());
+      _minVisibleIndex = (center - newRange / 2).clamp(0, widget.ohlcData.length.toDouble());
+      _maxVisibleIndex = (center + newRange / 2).clamp(0, widget.ohlcData.length.toDouble());
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      final center = (_minVisibleIndex + _maxVisibleIndex) / 2;
+      final newRange = ((_maxVisibleIndex - _minVisibleIndex) * 1.3).clamp(10.0, widget.ohlcData.length.toDouble());
+      _minVisibleIndex = (center - newRange / 2).clamp(0, widget.ohlcData.length.toDouble());
+      _maxVisibleIndex = (center + newRange / 2).clamp(0, widget.ohlcData.length.toDouble());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.ohlcData.isEmpty) {
       return Container(
         height: 500,
         decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
+          color: const Color(0xFF000000), // Very dark
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
@@ -73,27 +91,66 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
     return Container(
       height: _isOscillator ? 600 : 500,
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: const Color(0xFF000000), // Very dark like reference
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.textSecondary.withValues(alpha: 0.1),
+          color: const Color(0xFF2A2E39),
         ),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          if (_touchedX != null) _buildInfoBar(),
-          Expanded(
-            flex: _isOscillator ? 2 : 1,
-            child: _buildPriceChart(),
+          Column(
+            children: [
+              if (_touchedX != null) _buildInfoBar(),
+              Expanded(
+                flex: _isOscillator ? 2 : 1,
+                child: _buildPriceChart(),
+              ),
+              if (_isOscillator) ...[
+                const Divider(height: 1, color: Color(0xFF2A2E39)),
+                Expanded(
+                  flex: 1,
+                  child: _buildOscillatorChart(),
+                ),
+              ],
+            ],
           ),
-          if (_isOscillator) ...[
-            const Divider(height: 1, color: Colors.white12),
-            Expanded(
-              flex: 1,
-              child: _buildOscillatorChart(),
+          // Control buttons
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Row(
+              children: [
+                _buildControlButton(Icons.zoom_in, _zoomIn),
+                const SizedBox(width: 4),
+                _buildControlButton(Icons.zoom_out, _zoomOut),
+                const SizedBox(width: 4),
+                _buildControlButton(Icons.refresh, () {
+                  setState(() {
+                    _resetView();
+                    _touchedX = null;
+                  });
+                }),
+              ],
             ),
-          ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton(IconData icon, VoidCallback onPressed) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0C10).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF2A2E39)),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white70, size: 18),
+        onPressed: onPressed,
+        padding: const EdgeInsets.all(4),
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       ),
     );
   }
@@ -104,16 +161,16 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: AppTheme.backgroundColor.withValues(alpha: 0.8),
+      color: const Color(0xFF0A0C10).withValues(alpha: 0.95),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             _infoChip('O', candle.open, Colors.white70),
-            _infoChip('H', candle.high, AppTheme.primaryColor),
-            _infoChip('L', candle.low, AppTheme.secondaryColor),
+            _infoChip('H', candle.high, const Color(0xFF26A69A)),
+            _infoChip('L', candle.low, const Color(0xFFEF5350)),
             _infoChip('C', candle.close, 
-              candle.close >= candle.open ? AppTheme.primaryColor : AppTheme.secondaryColor),
+              candle.close >= candle.open ? const Color(0xFF26A69A) : const Color(0xFFEF5350)),
             
             if (widget.strategyResult != null && index < widget.strategyResult!.indicatorLine.length) ...[
               const SizedBox(width: 8),
@@ -135,7 +192,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
           children: [
             TextSpan(
               text: '$label: ',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+              style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 11),
             ),
             TextSpan(
               text: value.toStringAsFixed(2),
@@ -155,7 +212,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
       widgets.add(_infoChip(
         result.indicatorName,
         result.indicatorLine[index],
-        AppTheme.accentColor,
+        const Color(0xFF42A5F5),
       ));
     }
 
@@ -175,14 +232,14 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: signal.type == SignalType.buy 
-              ? AppTheme.primaryColor.withValues(alpha: 0.2)
-              : AppTheme.secondaryColor.withValues(alpha: 0.2),
+              ? const Color(0xFF26A69A).withValues(alpha: 0.2)
+              : const Color(0xFFEF5350).withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           signal.type == SignalType.buy ? '📈 BUY' : '📉 SELL',
           style: TextStyle(
-            color: signal.type == SignalType.buy ? AppTheme.primaryColor : AppTheme.secondaryColor,
+            color: signal.type == SignalType.buy ? const Color(0xFF26A69A) : const Color(0xFFEF5350),
             fontSize: 10,
             fontWeight: FontWeight.bold,
           ),
@@ -195,32 +252,16 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
 
   Widget _buildPriceChart() {
     return GestureDetector(
-      onLongPressStart: (details) {
-        // Find the x position and convert to data index
+      // Simple tap to show crosshair - no long press!
+      onTapDown: (details) {
         final RenderBox renderBox = context.findRenderObject() as RenderBox;
         final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final chartWidth = renderBox.size.width - 24; // Account for padding
+        final chartWidth = renderBox.size.width - 66; // Account for padding and labels
         final relativeX = (localPosition.dx - 8) / chartWidth;
         final dataIndex = _minVisibleIndex + (relativeX * (_maxVisibleIndex - _minVisibleIndex));
         
         setState(() {
           _touchedX = dataIndex.clamp(0, widget.ohlcData.length - 1).toDouble();
-        });
-      },
-      onLongPressMoveUpdate: (details) {
-        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-        final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final chartWidth = renderBox.size.width - 24;
-        final relativeX = (localPosition.dx - 8) / chartWidth;
-        final dataIndex = _minVisibleIndex + (relativeX * (_maxVisibleIndex - _minVisibleIndex));
-        
-        setState(() {
-          _touchedX = dataIndex.clamp(0, widget.ohlcData.length - 1).toDouble();
-        });
-      },
-      onLongPressEnd: (details) {
-        setState(() {
-          _touchedX = null;
         });
       },
       onScaleStart: (details) {
@@ -242,15 +283,14 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
             _lastScale = details.scale;
           }
           
-          // Pan (drag gesture) - only if not zooming
-          if (details.scale == 1.0 || details.scale == _lastScale) {
+          // Pan (drag gesture)
+          if (details.scale == 1.0) {
             final dx = details.focalPoint.dx - _lastFocalPointX;
-            final shift = -(dx / 500) * visibleRange; // Increased divisor for smoother scroll
+            final shift = -(dx / 500) * visibleRange;
             
             final newMin = (_minVisibleIndex + shift).clamp(0.0, widget.ohlcData.length.toDouble());
             final newMax = (_maxVisibleIndex + shift).clamp(0.0, widget.ohlcData.length.toDouble());
             
-            // Only update if both are valid
             if (newMin >= 0 && newMax <= widget.ohlcData.length.toDouble()) {
               _minVisibleIndex = newMin.toDouble();
               _maxVisibleIndex = newMax.toDouble();
@@ -272,31 +312,15 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
 
   Widget _buildOscillatorChart() {
     return GestureDetector(
-      onLongPressStart: (details) {
+      onTapDown: (details) {
         final RenderBox renderBox = context.findRenderObject() as RenderBox;
         final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final chartWidth = renderBox.size.width - 24;
+        final chartWidth = renderBox.size.width - 66;
         final relativeX = (localPosition.dx - 8) / chartWidth;
         final dataIndex = _minVisibleIndex + (relativeX * (_maxVisibleIndex - _minVisibleIndex));
         
         setState(() {
           _touchedX = dataIndex.clamp(0, widget.ohlcData.length - 1).toDouble();
-        });
-      },
-      onLongPressMoveUpdate: (details) {
-        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-        final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final chartWidth = renderBox.size.width - 24;
-        final relativeX = (localPosition.dx - 8) / chartWidth;
-        final dataIndex = _minVisibleIndex + (relativeX * (_maxVisibleIndex - _minVisibleIndex));
-        
-        setState(() {
-          _touchedX = dataIndex.clamp(0, widget.ohlcData.length - 1).toDouble();
-        });
-      },
-      onLongPressEnd: (details) {
-        setState(() {
-          _touchedX = null;
         });
       },
       onScaleStart: (details) {
@@ -307,7 +331,6 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
         setState(() {
           final visibleRange = _maxVisibleIndex - _minVisibleIndex;
           
-          // Zoom
           if (details.scale != _lastScale && details.scale != 1.0) {
             final zoomFactor = details.scale / _lastScale;
             final newRange = (visibleRange / zoomFactor).clamp(10.0, widget.ohlcData.length.toDouble());
@@ -318,8 +341,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
             _lastScale = details.scale;
           }
           
-          // Pan
-          if (details.scale == 1.0 || details.scale == _lastScale) {
+          if (details.scale == 1.0) {
             final dx = details.focalPoint.dx - _lastFocalPointX;
             final shift = -(dx / 500) * visibleRange;
             
@@ -391,37 +413,14 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
       maxX: _maxVisibleIndex,
       minY: minPrice,
       maxY: maxPrice,
-      lineTouchData: LineTouchData(
-        enabled: true,
-        handleBuiltInTouches: false,
-        touchCallback: (event, response) {
-          setState(() {
-            if (response?.lineBarSpots != null && response!.lineBarSpots!.isNotEmpty) {
-              _touchedX = response.lineBarSpots!.first.x;
-            }
-          });
-        },
-        getTouchedSpotIndicator: (barData, spotIndexes) {
-          return spotIndexes.map((index) {
-            return TouchedSpotIndicatorData(
-              FlLine(color: Colors.white.withValues(alpha: 0.5), strokeWidth: 1, dashArray: [5, 5]),
-              FlDotData(show: false),
-            );
-          }).toList();
-        },
-        touchTooltipData: LineTouchTooltipData(
-          tooltipBgColor: Colors.transparent,
-          tooltipBorder: const BorderSide(color: Colors.transparent),
-          getTooltipItems: (spots) => [],
-        ),
-      ),
+      lineTouchData: const LineTouchData(enabled: false),
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
         horizontalInterval: (maxPrice - minPrice) / 5,
         getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: AppTheme.textSecondary.withValues(alpha: 0.1),
+          return const FlLine(
+            color: Color(0xFF2A2E39), // Subtle grid
             strokeWidth: 1,
           );
         },
@@ -434,7 +433,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
             getTitlesWidget: (value, meta) {
               return Text(
                 value.toStringAsFixed(2),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 10),
               );
             },
           ),
@@ -452,7 +451,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
               final date = widget.ohlcData[index].timestamp;
               return Text(
                 '${date.month}/${date.day}',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 10),
               );
             },
           ),
@@ -463,13 +462,40 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
         ..._buildCandlestickBars(),
         if (widget.strategyResult != null && !_isOscillator) ..._buildIndicatorLines(),
       ],
+      // Vertical AND horizontal crosshair
       extraLinesData: _touchedX != null ? ExtraLinesData(
         verticalLines: [
           VerticalLine(
             x: _touchedX!,
-            color: Colors.white.withValues(alpha: 0.3),
+            color: Colors.white.withValues(alpha: 0.6),
             strokeWidth: 1,
             dashArray: [5, 5],
+            label: VerticalLineLabel(
+              show: true,
+              alignment: Alignment.topRight,
+              padding: const EdgeInsets.all(4),
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+              labelResolver: (line) {
+                final index = line.x.round().clamp(0, widget.ohlcData.length - 1);
+                final date = widget.ohlcData[index].timestamp;
+                return '${date.month}/${date.day}/${date.year}';
+              },
+            ),
+          ),
+        ],
+        horizontalLines: [
+          HorizontalLine(
+            y: widget.ohlcData[_touchedX!.round().clamp(0, widget.ohlcData.length - 1)].close,
+            color: Colors.white.withValues(alpha: 0.6),
+            strokeWidth: 1,
+            dashArray: [5, 5],
+            label: HorizontalLineLabel(
+              show: true,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.all(4),
+              style: const TextStyle(color: Colors.white, fontSize: 10, backgroundColor: Color(0xFF0A0C10)),
+              labelResolver: (line) => '\$${line.y.toStringAsFixed(2)}',
+            ),
           ),
         ],
       ) : null,
@@ -514,37 +540,14 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
       maxX: _maxVisibleIndex,
       minY: minVal,
       maxY: maxVal,
-      lineTouchData: LineTouchData(
-        enabled: true,
-        handleBuiltInTouches: false,
-        touchCallback: (event, response) {
-          setState(() {
-            if (response?.lineBarSpots != null && response!.lineBarSpots!.isNotEmpty) {
-              _touchedX = response.lineBarSpots!.first.x;
-            }
-          });
-        },
-        getTouchedSpotIndicator: (barData, spotIndexes) {
-          return spotIndexes.map((index) {
-            return TouchedSpotIndicatorData(
-              FlLine(color: Colors.white.withValues(alpha: 0.5), strokeWidth: 1, dashArray: [5, 5]),
-              FlDotData(show: false),
-            );
-          }).toList();
-        },
-        touchTooltipData: LineTouchTooltipData(
-          tooltipBgColor: Colors.transparent,
-          tooltipBorder: const BorderSide(color: Colors.transparent),
-          getTooltipItems: (spots) => [],
-        ),
-      ),
+      lineTouchData: const LineTouchData(enabled: false),
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
         horizontalInterval: (maxVal - minVal) / 4,
         getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: AppTheme.textSecondary.withValues(alpha: 0.1),
+          return const FlLine(
+            color: Color(0xFF2A2E39),
             strokeWidth: 1,
           );
         },
@@ -557,7 +560,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
             getTitlesWidget: (value, meta) {
               return Text(
                 value.toStringAsFixed(1),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 10),
               );
             },
           ),
@@ -575,7 +578,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
               final date = widget.ohlcData[index].timestamp;
               return Text(
                 '${date.month}/${date.day}',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 10),
               );
             },
           ),
@@ -587,11 +590,37 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
         verticalLines: [
           VerticalLine(
             x: _touchedX!,
-            color: Colors.white.withValues(alpha: 0.3),
+            color: Colors.white.withValues(alpha: 0.6),
             strokeWidth: 1,
             dashArray: [5, 5],
+            label: VerticalLineLabel(
+              show: true,
+              alignment: Alignment.topRight,
+              padding: const EdgeInsets.all(4),
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+              labelResolver: (line) {
+                final index = line.x.round().clamp(0, widget.ohlcData.length - 1);
+                final date = widget.ohlcData[index].timestamp;
+                return '${date.month}/${date.day}/${date.year}';
+              },
+            ),
           ),
         ],
+        horizontalLines: widget.strategyResult != null && _touchedX!.round() < widget.strategyResult!.indicatorLine.length ? [
+          HorizontalLine(
+            y: widget.strategyResult!.indicatorLine[_touchedX!.round().clamp(0, widget.strategyResult!.indicatorLine.length - 1)],
+            color: Colors.white.withValues(alpha: 0.6),
+            strokeWidth: 1,
+            dashArray: [5, 5],
+            label: HorizontalLineLabel(
+              show: true,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.all(4),
+              style: const TextStyle(color: Colors.white, fontSize: 10, backgroundColor: Color(0xFF0A0C10)),
+              labelResolver: (line) => line.y.toStringAsFixed(2),
+            ),
+          ),
+        ] : [],
       ) : null,
     );
   }
@@ -602,7 +631,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
     for (int i = 0; i < widget.ohlcData.length; i++) {
       final candle = widget.ohlcData[i];
       final isGreen = candle.close >= candle.open;
-      final color = isGreen ? AppTheme.primaryColor : AppTheme.secondaryColor;
+      final color = isGreen ? const Color(0xFF26A69A) : const Color(0xFFEF5350);
 
       // Wick (high-low)
       bars.add(LineChartBarData(
@@ -643,7 +672,7 @@ class _CandlestickChartWidgetState extends State<CandlestickChartWidget> {
     if (mainSpots.isNotEmpty) {
       lines.add(LineChartBarData(
         spots: mainSpots,
-        color: AppTheme.accentColor,
+        color: const Color(0xFF42A5F5),
         barWidth: 2,
         dotData: const FlDotData(show: false),
         isCurved: true,

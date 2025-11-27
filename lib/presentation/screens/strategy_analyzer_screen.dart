@@ -5,6 +5,7 @@ import '../../logic/providers/strategy_provider.dart';
 import '../../data/models/trading_strategy.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/candlestick_chart_widget.dart';
+import 'full_chart_screen.dart';
 
 class StrategyAnalyzerScreen extends StatefulWidget {
   const StrategyAnalyzerScreen({super.key});
@@ -254,13 +255,36 @@ class _StrategyAnalyzerScreenState extends State<StrategyAnalyzerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${provider.symbol} - ${provider.selectedStrategy?.name ?? "Chart"}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '${provider.symbol} - ${provider.selectedStrategy?.name ?? "Chart"}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.fullscreen, color: Colors.white70),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FullChartScreen(
+                        symbol: provider.symbol,
+                        companyName: provider.symbol,
+                        strategyResult: provider.strategyResult,
+                      ),
+                    ),
+                  );
+                },
+                tooltip: 'Fullscreen',
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           CandlestickChartWidget(
@@ -269,7 +293,7 @@ class _StrategyAnalyzerScreenState extends State<StrategyAnalyzerScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Pinch to zoom • Drag to scroll • Long-press for crosshair',
+            'Pinch & pan to navigate • Tap candle for details',
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 12,

@@ -58,15 +58,21 @@ class InteractiveChartWidget extends StatelessWidget {
         child: InteractiveChart(
           candles: candleData,
           style: ChartStyle(
-            priceGainColor: AppTheme.primaryColor,
-            priceLossColor: AppTheme.secondaryColor,
-            volumeColor: AppTheme.textSecondary.withValues(alpha: 0.3),
-            // Dark theme
-            priceGridLineColor: AppTheme.textSecondary.withValues(alpha: 0.1),
-            priceLabelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-            timeLabelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-            selectionHighlightColor: Colors.white.withValues(alpha: 0.1),
-            overlayBackgroundColor: AppTheme.backgroundColor.withValues(alpha: 0.9),
+            // Candle colors
+            priceGainColor: const Color(0xFF26A69A), // Green
+            priceLossColor: const Color(0xFFEF5350), // Red
+            volumeColor: const Color(0xFF424242).withValues(alpha: 0.3),
+            
+            // Very dark background like reference image
+            priceGridLineColor: const Color(0xFF2A2E39), // Subtle grid lines
+            
+            // Labels
+            priceLabelStyle: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 11),
+            timeLabelStyle: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 11),
+            
+            // Crosshair styling
+            selectionHighlightColor: Colors.white.withValues(alpha: 0.2),
+            overlayBackgroundColor: const Color(0xFF1A1D24).withValues(alpha: 0.95), // Dark overlay
             overlayTextStyle: const TextStyle(color: Colors.white, fontSize: 12),
           ),
           timeLabel: (timestamp, visibleDataCount) {

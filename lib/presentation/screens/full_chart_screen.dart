@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/ohlc_data.dart';
 import '../../data/services/yahoo_finance_service.dart';
+import '../../data/models/trading_strategy.dart';
 import '../widgets/candlestick_chart_widget.dart';
-import '../widgets/full_interactive_chart_widget.dart';
 
 class FullChartScreen extends StatefulWidget {
   final String symbol;
   final String companyName;
+  final StrategyResult? strategyResult;
 
   const FullChartScreen({
     super.key,
     required this.symbol,
     required this.companyName,
+    this.strategyResult,
   });
 
   @override
@@ -250,9 +252,9 @@ class _FullChartScreenState extends State<FullChartScreen> {
           
           // Chart with zoom, pan, and crosshair
           Expanded(
-            child: FullInteractiveChartWidget(
+            child: CandlestickChartWidget(
               ohlcData: _chartData,
-              symbol: widget.symbol,
+              strategyResult: widget.strategyResult,
             ),
           ),
           
@@ -260,7 +262,7 @@ class _FullChartScreenState extends State<FullChartScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Pinch to zoom • Drag to pan • Tap to see values',
+              'Pinch to zoom • Drag to pan • Tap for crosshair',
               style: TextStyle(
                 color: AppTheme.textSecondary,
                 fontSize: 11,
