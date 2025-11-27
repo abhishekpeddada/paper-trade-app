@@ -113,67 +113,48 @@ class _FullChartScreenState extends State<FullChartScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Timeframe selector
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.1),
+          // Chart display (full width now)
+          _buildChartContent(),
+          
+          // Compact timeframe dropdown in top-right corner
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.3),
                 ),
               ),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _intervals.map((interval) {
-                  final isSelected = _selectedInterval == interval['value'];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => _changeInterval(interval['value']!),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppTheme.accentColor
-                              : AppTheme.backgroundColor,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppTheme.accentColor
-                                : AppTheme.textSecondary.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          interval['label']!,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : AppTheme.textSecondary,
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ),
+              child: DropdownButton<String>(
+                value: _selectedInterval,
+                icon: const Icon(Icons.arrow_drop_down, size: 20),
+                iconEnabledColor: AppTheme.accentColor,
+                underline: const SizedBox(),
+                dropdownColor: AppTheme.surfaceColor,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+                items: _intervals.map((interval) {
+                  return DropdownMenuItem<String>(
+                    value: interval['value'],
+                    child: Text(interval['label']!),
                   );
                 }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    _changeInterval(newValue);
+                  }
+                },
               ),
             ),
-          ),
-
-          // Chart display
-          Expanded(
-            child: _buildChartContent(),
           ),
         ],
       ),

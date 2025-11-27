@@ -140,8 +140,13 @@ class AIProvider extends ChangeNotifier {
         throw Exception('No historical data available');
       }
 
-      // Call AI for analysis with indicators
-      final response = await _aiService.analyzeMarketWithIndicators(symbol, history, indicators);
+      // Call AI for analysis with indicators and trading system
+      final response = await _aiService.analyzeMarketWithIndicators(
+        symbol, 
+        history, 
+        indicators,
+        tradingSystem: _tradingSystem, // Pass user's trading system
+      );
       _lastSignal = AISignal.fromString(response);
       
       _addToLog('Analyzed $symbol with indicators', _lastSignal!.signal);

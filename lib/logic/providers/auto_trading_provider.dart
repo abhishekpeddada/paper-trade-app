@@ -138,8 +138,8 @@ class AutoTradingProvider extends ChangeNotifier {
       if (!_isRunning) break; // Allow cancellation
 
       _addLog('\n╔════════════════════════════════════════════╗');
-      _addLog('║ 📊 Analyzing $symbol');
-      _addLog('╚════════════════════════════════════════════╝');
+      _addLog('  ║ 📊 Analyzing $symbol');
+      _addLog('  ╚════════════════════════════════════════════╝');
       
       try {
         // Fetch OHLC data for indicator calculation

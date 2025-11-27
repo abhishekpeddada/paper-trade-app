@@ -50,8 +50,9 @@ class OpenRouterService {
   Future<String> analyzeMarketWithIndicators(
     String symbol, 
     List<Map<String, dynamic>> history,
-    Map<String, dynamic> indicators,
-  ) async {
+    Map<String, dynamic> indicators, {
+    String? tradingSystem,
+  }) async {
     // Limit history to last 30 days
     final recentHistory = history.length > 30 ? history.sublist(history.length - 30) : history;
     
@@ -65,6 +66,18 @@ class OpenRouterService {
     String currencySymbol = '\$';
     if (symbol.endsWith('.NS') || symbol.endsWith('.BO')) {
       currencySymbol = '₹';
+    }
+    
+    // Include trading system if available and not default
+    String systemContext = '';
+    if (tradingSystem != null && !tradingSystem.contains('No trading system generated yet')) {
+      systemContext = '''
+
+USER'S TRADING SYSTEM:
+$tradingSystem
+
+IMPORTANT: Consider the user's trading system above when making your recommendation. Align your analysis with their defined rules and preferences.
+''';
     }
     
     final prompt = '''
@@ -95,7 +108,7 @@ Bollinger Bands:
 - Middle: $currencySymbol${bb?['middle']?.toStringAsFixed(2) ?? 'N/A'}
 - Lower: $currencySymbol${bb?['lower']?.toStringAsFixed(2) ?? 'N/A'}
 - Position: ${bb?['position'] ?? 'N/A'}
-
+$systemContext
 REQUIREMENTS:
 1. Analyze ALL indicators (PSAR, RSI, MACD, Bollinger Bands)
 2. Identify agreements and conflicts between signals
@@ -123,21 +136,53 @@ Be thorough in your reasoning - explain your thinking process!
 
   Future<String> generateTradingSystem({String? userPreferences}) async {
     String prompt = '''
-    Generate a robust algorithmic trading system description based on technical analysis.
-    Include:
-    1. Strategy Name
-    2. Key Indicators (e.g., RSI, MACD, Bollinger Bands)
-    3. Entry Rules
-    4. Exit Rules
-    5. Risk Management
-    
-    Keep it concise and actionable.
-    ''';
-    
-    if (userPreferences != null && userPreferences.isNotEmpty) {
-      prompt += '\n\nUser Preferences/Requirements:\n$userPreferences\n\nIncorporate these preferences into the trading system.';
-    }
-    
+Generate a comprehensive trading system based on the following technical indicators that are actively used in the platform:
+
+CORE INDICATORS:
+1. **PAR (Parabolic SAR)**: Trend-following indicator
+   - Buy when price crosses above PSAR
+   - Sell when price crosses below PSAR
+   - Use PSAR value as trailing stop loss
+
+2. **RSI (Relative Strength Index, 14-period)**: Momentum oscillator
+   - Oversold: RSI < 30 (potential buy)
+   - Overbought: RSI > 70 (potential sell)
+   - Neutral: 30 ≤ RSI ≤ 70
+
+3. **MACD (12,26,9)**: Trend and momentum
+   - Bullish crossover: MACD line crosses above Signal line
+   - Bearish crossover: MACD line crosses below Signal line
+   - Histogram shows momentum strength
+
+4. **Bollinger Bands (20, 2)**: Volatility and price extremes
+   - Price above upper band: Overbought
+   - Price below lower band: Oversold
+   - Price near middle band: Neutral
+
+${userPreferences != null && userPreferences.isNotEmpty ? '''
+USER PREFERENCES:
+$userPreferences
+
+IMPORTANT: Incorporate the user's preferences above into the trading system design.
+''' : ''}
+
+Generate a detailed trading system that:
+1. **Entry Rules**: Clear conditions using indicator agreement (e.g., "Buy when PSAR is bullish AND RSI < 50 AND MACD shows bullish crossover")
+2. **Exit Rules**: When to close positions (e.g., "Sell when 2 or more indicators turn bearish")
+3. **Risk Management**: Position sizing, stop loss (use PSAR), take profit targets
+4. **Timeframes**: Recommended timeframes for each indicator
+5. **Conflict Resolution**: How to handle disagreeing indicators
+6. **Confidence Scoring**: How to rate trade confidence (0-100%) based on indicator alignment
+
+Format the system in clean markdown with:
+- Clear headers (## for sections)
+- Bullet points for rules
+- **Bold** for important criteria
+- Code blocks for specific conditions
+
+Make it actionable and specific - not generic advice!
+''';
+
     return _callAI(prompt);
   }
 
