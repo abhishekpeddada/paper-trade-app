@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../logic/providers/pine_provider.dart';
+import '../../logic/providers/strategy_provider.dart';
 import '../../data/models/trading_strategy.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/candlestick_chart_widget.dart';
 
-class PineScriptScreen extends StatefulWidget {
-  const PineScriptScreen({super.key});
+class StrategyAnalyzerScreen extends StatefulWidget {
+  const StrategyAnalyzerScreen({super.key});
 
   @override
-  State<PineScriptScreen> createState() => _PineScriptScreenState();
+  State<StrategyAnalyzerScreen> createState() => _StrategyAnalyzerScreenState();
 }
 
-class _PineScriptScreenState extends State<PineScriptScreen> {
+class _StrategyAnalyzerScreenState extends State<StrategyAnalyzerScreen> {
   final TextEditingController _symbolController = TextEditingController();
 
   @override
@@ -26,9 +26,9 @@ class _PineScriptScreenState extends State<PineScriptScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trading Strategies'),
+        title: const Text('Strategy Analyzer'),
       ),
-      body: Consumer<PineScriptProvider>(
+      body: Consumer<StrategyProvider>(
         builder: (context, provider, child) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -65,7 +65,7 @@ class _PineScriptScreenState extends State<PineScriptScreen> {
     );
   }
 
-  Widget _buildSymbolInput(PineScriptProvider provider) {
+  Widget _buildSymbolInput(StrategyProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -94,7 +94,7 @@ class _PineScriptScreenState extends State<PineScriptScreen> {
     );
   }
 
-  Widget _buildTimeframeSelector(PineScriptProvider provider) {
+  Widget _buildTimeframeSelector(StrategyProvider provider) {
     final timeframes = [
       {'label': '1D', 'value': '1d'},
       {'label': '1W', 'value': '1w'},
@@ -161,7 +161,7 @@ class _PineScriptScreenState extends State<PineScriptScreen> {
     );
   }
 
-  Widget _buildStrategyButtons(PineScriptProvider provider) {
+  Widget _buildStrategyButtons(StrategyProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -244,7 +244,7 @@ class _PineScriptScreenState extends State<PineScriptScreen> {
     );
   }
 
-  Widget _buildChartSection(PineScriptProvider provider) {
+  Widget _buildChartSection(StrategyProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

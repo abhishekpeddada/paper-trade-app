@@ -51,17 +51,16 @@ class YahooFinanceService {
   Future<List<Map<String, dynamic>>> getOHLCData(String symbol, {String timeframe = '1d'}) async {
     try {
       // Map timeframes to Yahoo Finance parameters
+      // interval = candle period, range = how much historical data
       final rangeMap = {
-        '1d': {'interval': '5m', 'range': '1d'},
-        '1w': {'interval': '1h', 'range': '5d'},
-        '1m': {'interval': '1d', 'range': '1mo'},
-        '3m': {'interval': '1d', 'range': '3mo'},
-        '6m': {'interval': '1d', 'range': '6mo'},
-        '1y': {'interval': '1d', 'range': '1y'},
-        'all': {'interval': '1wk', 'range': 'max'},
+        '1d': {'interval': '1d', 'range': '1y'},    // Daily candles, 1 year of data
+        '1w': {'interval': '1wk', 'range': '2y'},   // Weekly candles, 2 years of data
+        '1mo': {'interval': '1mo', 'range': '5y'},  // Monthly candles, 5 years of data
+        '3mo': {'interval': '3mo', 'range': '10y'}, // Quarterly candles, 10 years of data
+        '1y': {'interval': '1mo', 'range': 'max'},  // Monthly candles, all available data
       };
       
-      final params = rangeMap[timeframe] ?? rangeMap['1m']!;
+      final params = rangeMap[timeframe] ?? rangeMap['1d']!;
       final url = '$baseUrl/$symbol?interval=${params['interval']}&range=${params['range']}';
       
       final response = await http.get(

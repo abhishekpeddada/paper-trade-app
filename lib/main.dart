@@ -6,7 +6,8 @@ import 'presentation/screens/main_screen.dart';
 import 'logic/providers/portfolio_provider.dart';
 import 'logic/providers/watchlist_provider.dart';
 import 'logic/providers/ai_provider.dart';
-import 'logic/providers/pine_provider.dart';
+import 'logic/providers/strategy_provider.dart';
+import 'presentation/screens/strategy_analyzer_screen.dart';
 import 'logic/providers/auto_trading_provider.dart';
 
 
@@ -35,7 +36,7 @@ class PaperTradeApp extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider(
-          create: (_) => PineScriptProvider(),
+          create: (_) => StrategyProvider(),
         ),
         ChangeNotifierProvider(
           create: (_) => AutoTradingProvider(),

@@ -4,7 +4,7 @@ import '../../data/models/ohlc_data.dart';
 import '../../data/models/trading_strategy.dart';
 import '../services/strategy_engine.dart';
 
-class PineScriptProvider with ChangeNotifier {
+class StrategyProvider with ChangeNotifier {
   final YahooFinanceService _yahooService = YahooFinanceService();
   
   String _symbol = '';

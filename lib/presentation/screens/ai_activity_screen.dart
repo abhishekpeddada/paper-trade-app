@@ -6,7 +6,7 @@ import '../../logic/providers/portfolio_provider.dart';
 import '../../logic/providers/watchlist_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'pinescript_screen.dart';
+import 'strategy_analyzer_screen.dart';
 
 class AiActivityScreen extends StatelessWidget {
   const AiActivityScreen({super.key});
@@ -187,7 +187,7 @@ class AiActivityScreen extends StatelessWidget {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const PineScriptScreen()),
+              MaterialPageRoute(builder: (context) => const StrategyAnalyzerScreen()),
             );
           },
           child: Padding(
@@ -208,7 +208,7 @@ class AiActivityScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'PineScript Converter',
+                        'Strategy Analyzer',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -217,7 +217,7 @@ class AiActivityScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Convert PineScript to Dart & plot on charts',
+                        'Analyze stocks with built-in trading strategies',
                         style: TextStyle(
                           color: AppTheme.textSecondary,
                           fontSize: 13,
