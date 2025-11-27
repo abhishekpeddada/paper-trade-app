@@ -213,6 +213,26 @@ class PortfolioProvider extends ChangeNotifier {
     }
   }
 
+  // Fetch a single price on demand (for auto-trading new positions)
+  Future<double> fetchPrice(String symbol) async {
+    if (_currentPrices.containsKey(symbol)) {
+      return _currentPrices[symbol]!;
+    }
+
+    try {
+      final stocks = await _repository.getWatchlist([symbol]);
+      if (stocks.isNotEmpty) {
+        final price = stocks.first.price;
+        _currentPrices[symbol] = price;
+        notifyListeners();
+        return price;
+      }
+    } catch (e) {
+      print('Error fetching price for $symbol: $e');
+    }
+    return 0.0;
+  }
+
   // Calculate profit/loss for a position in INR
   double getProfitLoss(Position position) {
     if (!_currentPrices.containsKey(position.symbol)) {

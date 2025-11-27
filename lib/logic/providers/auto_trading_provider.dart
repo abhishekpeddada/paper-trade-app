@@ -162,9 +162,15 @@ class AutoTradingProvider extends ChangeNotifier {
   }
 
   Future<void> _executeAutoTrade(String symbol, AISignal signal, PortfolioProvider portfolio) async {
-    final currentPrice = portfolio.currentPrices[symbol] ?? 0.0;
+    double currentPrice = portfolio.currentPrices[symbol] ?? 0.0;
+    
     if (currentPrice == 0.0) {
-      _addLog('Skipping trade: Price not available.');
+      _addLog('Price not found for $symbol. Fetching...');
+      currentPrice = await portfolio.fetchPrice(symbol);
+    }
+
+    if (currentPrice == 0.0) {
+      _addLog('Skipping trade: Price not available for $symbol.');
       return;
     }
 
