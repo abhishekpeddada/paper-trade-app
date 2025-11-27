@@ -86,7 +86,7 @@ class AccountScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '\$${provider.balance.toStringAsFixed(2)}',
+            CurrencyHelper.formatInr(provider.balance),
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,

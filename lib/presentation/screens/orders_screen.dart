@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../logic/providers/portfolio_provider.dart';
 import '../../data/models/trade_models.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_helper.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -81,7 +82,7 @@ class OrdersScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '${order.quantity.toStringAsFixed(0)} @ \$${order.price.toStringAsFixed(2)}',
+                          '${order.quantity.toStringAsFixed(0)} @ ${CurrencyHelper.formatPrice(order.price, order.symbol)}',
                           style: const TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 14,
