@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:interactive_chart/interactive_chart.dart';
 import '../../data/models/ohlc_data.dart';
+import '../../data/models/trading_strategy.dart';
 import '../../core/theme/app_theme.dart';
 
 class InteractiveChartWidget extends StatelessWidget {
   final List<OHLCData> ohlcData;
-  final List<double>? indicatorValues;
-  final String? indicatorName;
+  final StrategyResult? strategyResult;
 
   const InteractiveChartWidget({
     super.key,
     required this.ohlcData,
-    this.indicatorValues,
-    this.indicatorName,
+    this.strategyResult,
   });
 
   @override
@@ -33,7 +32,7 @@ class InteractiveChartWidget extends StatelessWidget {
       );
     }
 
-    // Convert OHLCData to CandleData format required by interactive_chart
+    // Convert OHLCData to CandleData format
     final candleData = ohlcData.map((data) {
       return CandleData(
         timestamp: data.timestamp.millisecondsSinceEpoch,
@@ -46,7 +45,7 @@ class InteractiveChartWidget extends StatelessWidget {
     }).toList();
 
     return Container(
-      height: 400,
+      height: 450,
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(12),
@@ -80,32 +79,62 @@ class InteractiveChartWidget extends StatelessWidget {
           },
           priceLabel: (price) => '\$${price.toStringAsFixed(2)}',
           overlayInfo: (candle) {
-            return {
+            final Map<String, String> info = {
               'Date': DateTime.fromMillisecondsSinceEpoch(candle.timestamp).toString().split('.')[0],
               'Open': '\$${candle.open?.toStringAsFixed(2)}',
               'High': '\$${candle.high?.toStringAsFixed(2)}',
               'Low': '\$${candle.low?.toStringAsFixed(2)}',
               'Close': '\$${candle.close?.toStringAsFixed(2)}',
               'Volume': candle.volume?.toStringAsFixed(0) ?? 'N/A',
-              if (indicatorName != null) indicatorName!: getIndicatorValueAtIndex(candle),
-            };
+           };
+
+            // Add strategy indicator values
+            if (strategyResult != null) {
+              final index = ohlcData.indexWhere((d) => 
+                d.timestamp.millisecondsSinceEpoch == candle.timestamp);
+              
+              if (index >= 0 && index < strategyResult!.indicatorLine.length) {
+                final indicatorValue = strategyResult!.indicatorLine[index];
+                if (!indicatorValue.isNaN) {
+                  info[strategyResult!.indicatorName] = indicatorValue.toStringAsFixed(2);
+                }
+
+                if (strategyResult!.secondaryLine != null && 
+                    index < strategyResult!.secondaryLine!.length) {
+                  final secondaryValue = strategyResult!.secondaryLine![index];
+                  if (!secondaryValue.isNaN) {
+                    info[strategyResult!.secondaryName ?? 'Secondary'] = 
+                      secondaryValue.toStringAsFixed(2);
+                  }
+                }
+              }
+
+              // Show signals at this candle
+              final signals = strategyResult!.signals.where((s) => s.index == index).toList();
+              for (var signal in signals) {
+                switch (signal.type) {
+                  case SignalType.buy:
+                    info['Signal'] = '📈 BUY';
+                    if (signal.stopLoss != null) {
+                      info['Stop Loss'] = '\$${signal.stopLoss!.toStringAsFixed(2)}';
+                    }
+                    if (signal.target != null) {
+                      info['Target'] = '\$${signal.target!.toStringAsFixed(2)}';
+                    }
+                    break;
+                  case SignalType.sell:
+                    info['Signal'] = '📉 SELL';
+                    break;
+                  default:
+                    break;
+                }
+              }
+            }
+
+            return info;
           },
         ),
       ),
     );
-  }
-
-  String getIndicatorValueAtIndex(CandleData candle) {
-    if (indicatorValues == null) return 'N/A';
-    
-    // Find the index of this candle
-    int index = ohlcData.indexWhere((d) => d.timestamp.millisecondsSinceEpoch == candle.timestamp);
-    
-    if (index >= 0 && index < indicatorValues!.length) {
-      final value = indicatorValues![index];
-      if (value.isNaN) return 'N/A';
-      return value.toStringAsFixed(2);
-    }
-    return 'N/A';
   }
 }

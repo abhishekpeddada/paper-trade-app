@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../logic/providers/pine_provider.dart';
+import '../../data/models/trading_strategy.dart';
 import '../widgets/custom_textfield.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/interactive_chart_widget.dart';
 import '../widgets/candlestick_chart_widget.dart';
 
 class PineScriptScreen extends StatefulWidget {
@@ -16,40 +15,18 @@ class PineScriptScreen extends StatefulWidget {
 
 class _PineScriptScreenState extends State<PineScriptScreen> {
   final TextEditingController _symbolController = TextEditingController();
-  final TextEditingController _pineScriptController = TextEditingController();
-  bool _showConvertedCode = false;
 
   @override
   void dispose() {
     _symbolController.dispose();
-    _pineScriptController.dispose();
     super.dispose();
-  }
-
-  void _loadExample() {
-    _symbolController.text = 'AAPL';
-    _pineScriptController.text = '''
-//@version=5
-indicator("SMA 20", overlay=true)
-length = 20
-sma20 = ta.sma(close, length)
-plot(sma20, color=color.blue, linewidth=2)
-''';
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PineScript Converter'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.lightbulb_outline),
-            onPressed: _loadExample,
-            tooltip: 'Load Example',
-          ),
-        ],
+        title: const Text('Trading Strategies'),
       ),
       body: Consumer<PineScriptProvider>(
         builder: (context, provider, child) {
@@ -58,23 +35,16 @@ plot(sma20, color=color.blue, linewidth=2)
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Input Section
-                _buildInputSection(provider),
+                _buildSymbolInput(provider),
                 const SizedBox(height: 20),
-
-                // Timeframe Selector
                 _buildTimeframeSelector(provider),
                 const SizedBox(height: 20),
-
-                // Convert Button
-                _buildConvertButton(provider),
+                _buildStrategyButtons(provider),
                 const SizedBox(height: 20),
 
-                // Error Message
                 if (provider.errorMessage != null)
                   _buildErrorMessage(provider.errorMessage!),
 
-                // Loading Indicator
                 if (provider.isLoading)
                   const Center(
                     child: Padding(
@@ -83,16 +53,9 @@ plot(sma20, color=color.blue, linewidth=2)
                     ),
                   ),
 
-                // Chart Section
                 if (provider.hasData && !provider.isLoading) ...[
                   const SizedBox(height: 20),
                   _buildChartSection(provider),
-                ],
-
-                // Converted Code Section
-                if (provider.hasConversion && !provider.isLoading) ...[
-                  const SizedBox(height: 20),
-                  _buildConvertedCodeSection(provider),
                 ],
               ],
             ),
@@ -102,7 +65,7 @@ plot(sma20, color=color.blue, linewidth=2)
     );
   }
 
-  Widget _buildInputSection(PineScriptProvider provider) {
+  Widget _buildSymbolInput(PineScriptProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -126,37 +89,6 @@ plot(sma20, color=color.blue, linewidth=2)
             hintText: 'e.g., AAPL, TSLA, GOOGL',
             onChanged: provider.setSymbol,
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'PineScript Code',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _pineScriptController,
-            maxLines: 10,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'monospace',
-              fontSize: 13,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Enter your PineScript indicator code...',
-              hintStyle: TextStyle(color: AppTheme.textSecondary),
-              filled: true,
-              fillColor: AppTheme.backgroundColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.all(12),
-            ),
-            onChanged: provider.setPineScriptCode,
-          ),
         ],
       ),
     );
@@ -166,9 +98,8 @@ plot(sma20, color=color.blue, linewidth=2)
     final timeframes = [
       {'label': '1D', 'value': '1d'},
       {'label': '1W', 'value': '1w'},
-      {'label': '1M', 'value': '1m'},
-      {'label': '3M', 'value': '3m'},
-      {'label': '6M', 'value': '6m'},
+      {'label': '1M', 'value': '1mo'},
+      {'label': '3M', 'value': '3mo'},
       {'label': '1Y', 'value': '1y'},
     ];
 
@@ -198,8 +129,8 @@ plot(sma20, color=color.blue, linewidth=2)
               return GestureDetector(
                 onTap: () {
                   provider.setTimeframe(tf['value']!);
-                  if (provider.hasData) {
-                    provider.refreshChartData();
+                  if (provider.hasData && provider.selectedStrategy != null) {
+                    provider.applyStrategy(strategy: provider.selectedStrategy!);
                   }
                 },
                 child: Container(
@@ -230,21 +161,63 @@ plot(sma20, color=color.blue, linewidth=2)
     );
   }
 
-  Widget _buildConvertButton(PineScriptProvider provider) {
-    if (provider.isLoading) {
-      return CustomButton(
-        text: 'Converting...',
-        color: AppTheme.accentColor.withValues(alpha: 0.5),
-        onPressed: () {}, // Disabled state
-      );
-    }
-    
-    return CustomButton(
-      text: 'Convert & Plot',
-      color: AppTheme.accentColor,
-      onPressed: () {
-        provider.convertAndPlot();
-      },
+  Widget _buildStrategyButtons(PineScriptProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Sample Scripts',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: TradingStrategy.allStrategies.map((strategy) {
+              final isSelected = provider.selectedStrategy?.id == strategy.id;
+              
+              return GestureDetector(
+                onTap: () {
+                  provider.applyStrategy(strategy: strategy);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? AppTheme.accentColor
+                        : AppTheme.backgroundColor,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected 
+                          ? AppTheme.accentColor 
+                          : AppTheme.textSecondary.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    strategy.name,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : AppTheme.textPrimary,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -281,46 +254,22 @@ plot(sma20, color=color.blue, linewidth=2)
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${provider.symbol} Chart',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (provider.conversion?.indicatorName != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    provider.conversion!.indicatorName!,
-                    style: TextStyle(
-                      color: AppTheme.accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
+          Text(
+            '${provider.symbol} - ${provider.selectedStrategy?.name ?? "Chart"}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
           CandlestickChartWidget(
             ohlcData: provider.chartData,
-            indicatorValues: provider.indicatorValues.isNotEmpty 
-                ? provider.indicatorValues 
-                : null,
-            indicatorName: provider.conversion?.indicatorName,
+            strategyResult: provider.strategyResult,
           ),
           const SizedBox(height: 12),
           Text(
-            'Hover over chart to see values',
+            'Pinch to zoom • Drag to scroll • Long-press for crosshair',
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 12,
@@ -332,64 +281,5 @@ plot(sma20, color=color.blue, linewidth=2)
       ),
     );
   }
-
-  Widget _buildConvertedCodeSection(PineScriptProvider provider) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Converted Dart Code',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  _showConvertedCode ? Icons.expand_less : Icons.expand_more,
-                  color: AppTheme.accentColor,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _showConvertedCode = !_showConvertedCode;
-                  });
-                },
-              ),
-            ],
-          ),
-          if (_showConvertedCode) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.backgroundColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SelectableText(
-                  provider.conversion!.convertedDartCode,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
+
