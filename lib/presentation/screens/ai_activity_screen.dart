@@ -341,9 +341,11 @@ class AiActivityScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   // Generate button
                   IconButton(
-                    onPressed: () => _showPreferencesDialog(context, provider),
-                    icon: const Icon(Icons.refresh, size: 20),
-                    tooltip: 'Generate New',
+                    onPressed: provider.isAnalyzing ? null : () => _showPreferencesDialog(context, provider),
+                    icon: provider.isAnalyzing 
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentColor))
+                        : const Icon(Icons.refresh, size: 20),
+                    tooltip: provider.isAnalyzing ? 'Generating...' : 'Generate New',
                     color: AppTheme.accentColor,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
