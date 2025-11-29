@@ -29,33 +29,19 @@ class AutoTradingProvider extends ChangeNotifier {
   }
 
   Future<void> _loadLogs() async {
-    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
-      // Local storage
-      final prefs = await SharedPreferences.getInstance();
-      final savedLogs = prefs.getStringList('auto_trading_logs');
-      if (savedLogs != null) {
-        _logs = savedLogs;
-        notifyListeners();
-      }
-    } else {
-      // Firebase cloud storage
-      final savedLogs = await _firestoreService.loadAutoTradingLogs();
-      if (savedLogs.isNotEmpty) {
-        _logs = savedLogs;
-        notifyListeners();
-      }
+    // Auto-trading logs are local-only (not synced to Firebase)
+    final prefs = await SharedPreferences.getInstance();
+    final savedLogs = prefs.getStringList('auto_trading_logs');
+    if (savedLogs != null) {
+      _logs = savedLogs;
+      notifyListeners();
     }
   }
 
   Future<void> _saveLogs() async {
-    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
-      // Local storage
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('auto_trading_logs', _logs);
-    } else {
-      // Firebase cloud storage
-      await _firestoreService.saveAutoTradingLogs(_logs);
-    }
+    // Auto-trading logs are local-only (not synced to Firebase)
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('auto_trading_logs', _logs);
   }
 
   void _addLog(String message) {

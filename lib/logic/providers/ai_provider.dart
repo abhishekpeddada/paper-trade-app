@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/openrouter_service.dart';
 import '../../data/services/yahoo_finance_service.dart';
 import '../../data/models/ai_signal.dart';
 import '../../data/models/trade_models.dart';
+import '../../core/services/firestore_service.dart';
 import 'portfolio_provider.dart';
 
 class AIProvider extends ChangeNotifier {
   OpenRouterService _aiService;
   final YahooFinanceService _financeService = YahooFinanceService();
+  final FirestoreService _firestoreService = FirestoreService();
   
   String _apiKey;
   String _selectedModel;
@@ -38,8 +41,20 @@ class AIProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _apiKey = prefs.getString('ai_api_key') ?? _apiKey;
     _selectedModel = prefs.getString('ai_model') ?? _selectedModel;
-    _tradingSystem = prefs.getString('ai_trading_system') ?? _tradingSystem;
     
+    // Load trading system from Firebase first, fallback to local
+    if (defaultTargetPlatform != TargetPlatform.linux && defaultTargetPlatform != TargetPlatform.windows) {
+      final firebaseSystem = await _firestoreService.loadTradingSystem();
+      if (firebaseSystem != null) {
+        _tradingSystem = firebaseSystem;
+      } else {
+        _tradingSystem = prefs.getString('ai_trading_system') ?? _tradingSystem;
+      }
+    } else {
+      _tradingSystem = prefs.getString('ai_trading_system') ?? _tradingSystem;
+    }
+    
+    // AI logs remain local-only (not synced to Firebase)
     final logsJson = prefs.getString('ai_activity_log');
     if (logsJson != null) {
       try {
@@ -57,8 +72,14 @@ class AIProvider extends ChangeNotifier {
 
   Future<void> _saveState() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('ai_trading_system', _tradingSystem);
     
+    // Save trading system to both local and Firebase
+    await prefs.setString('ai_trading_system', _tradingSystem);
+    if (defaultTargetPlatform != TargetPlatform.linux && defaultTargetPlatform != TargetPlatform.windows) {
+      await _firestoreService.saveTradingSystem(_tradingSystem);
+    }
+    
+    // AI logs stay local-only (not synced to Firebase)
     // Convert DateTime objects to strings for JSON serialization
     final logsToSave = _activityLog.map((log) {
       final Map<String, dynamic> copy = Map.from(log);

@@ -63,29 +63,29 @@ class FirestoreService {
     }
     return [];
   }
+  
+  // --- Trading System ---
 
-  // --- Auto Trading Logs ---
-
-  Future<void> saveAutoTradingLogs(List<String> logs) async {
+  Future<void> saveTradingSystem(String system) async {
     if (_uid == null || _db == null) return;
 
-    // Firestore has a 1MB limit per document, so we might need to be careful with huge logs.
-    // For now, we'll assume 200 lines is fine.
-    await _db!.collection('users').doc(_uid).collection('settings').doc('auto_trading').set({
-      'logs': logs,
+    await _db!.collection('users').doc(_uid).collection('settings').doc('trading_system').set({
+      'system': system,
       'last_updated': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
   }
 
-  Future<List<String>> loadAutoTradingLogs() async {
-    if (_uid == null || _db == null) return [];
+  Future<String?> loadTradingSystem() async {
+    if (_uid == null || _db == null) return null;
 
-    final doc = await _db!.collection('users').doc(_uid).collection('settings').doc('auto_trading').get();
+    final doc = await _db!.collection('users').doc(_uid).collection('settings').doc('trading_system').get();
     if (doc.exists && doc.data() != null) {
-      return List<String>.from(doc.data()!['logs'] ?? []);
+      return doc.data()!['system'] as String?;
     }
-    return [];
+    return null;
   }
+  
+  // --- Auto Trading State (last scan date only, no logs) ---
   
   Future<void> saveLastScanDate(String date) async {
     if (_uid == null || _db == null) return;
