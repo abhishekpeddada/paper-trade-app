@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/stock_model.dart';
 import '../../data/repositories/stock_repository.dart';
+import '../../core/services/firestore_service.dart';
 
 class WatchlistProvider extends ChangeNotifier {
   final StockRepository _repository = StockRepository();
+  final FirestoreService _firestoreService = FirestoreService();
   List<Stock> _watchlist = [];
   List<String> _searchResults = [];
   bool _isLoading = false;
@@ -31,18 +34,33 @@ class WatchlistProvider extends ChangeNotifier {
   }
 
   Future<void> _loadAndFetchWatchlist() async {
-    // Load saved symbols
-    final prefs = await SharedPreferences.getInstance();
-    _symbols = prefs.getStringList('watchlist_symbols') ?? 
-               ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'];
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      // Local storage
+      final prefs = await SharedPreferences.getInstance();
+      _symbols = prefs.getStringList('watchlist_symbols') ?? ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'];
+    } else {
+      // Firebase cloud storage
+      final savedSymbols = await _firestoreService.loadWatchlist();
+      if (savedSymbols.isNotEmpty) {
+        _symbols = savedSymbols;
+      } else {
+        _symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'];
+      }
+    }
     
     print('📋 Loaded ${_symbols.length} symbols from storage');
     await fetchWatchlist();
   }
 
   Future<void> _saveSymbols() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('watchlist_symbols', _symbols);
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      // Local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('watchlist_symbols', _symbols);
+    } else {
+      // Firebase cloud storage
+      await _firestoreService.saveWatchlist(_symbols);
+    }
     print('💾 Saved ${_symbols.length} symbols to storage');
   }
 
@@ -142,5 +160,10 @@ class WatchlistProvider extends ChangeNotifier {
     await _saveSymbols();
     notifyListeners();
     print('🗑️ Removed $symbol from watchlist');
+  }
+
+  // Call this when user logs in
+  Future<void> reloadData() async {
+    await _loadAndFetchWatchlist();
   }
 }

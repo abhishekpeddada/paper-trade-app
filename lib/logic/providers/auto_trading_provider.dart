@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ai_provider.dart';
 import 'portfolio_provider.dart';
@@ -9,9 +10,11 @@ import '../../data/models/trading_strategy.dart';
 import '../../data/services/yahoo_finance_service.dart';
 import '../services/strategy_engine.dart';
 import '../../core/utils/currency_helper.dart';
+import '../../core/services/firestore_service.dart';
 
 class AutoTradingProvider extends ChangeNotifier {
   final YahooFinanceService _yahooService = YahooFinanceService();
+  final FirestoreService _firestoreService = FirestoreService();
   
   bool _isRunning = false;
   List<String> _logs = [];
@@ -26,17 +29,33 @@ class AutoTradingProvider extends ChangeNotifier {
   }
 
   Future<void> _loadLogs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLogs = prefs.getStringList('auto_trading_logs');
-    if (savedLogs != null) {
-      _logs = savedLogs;
-      notifyListeners();
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      // Local storage
+      final prefs = await SharedPreferences.getInstance();
+      final savedLogs = prefs.getStringList('auto_trading_logs');
+      if (savedLogs != null) {
+        _logs = savedLogs;
+        notifyListeners();
+      }
+    } else {
+      // Firebase cloud storage
+      final savedLogs = await _firestoreService.loadAutoTradingLogs();
+      if (savedLogs.isNotEmpty) {
+        _logs = savedLogs;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> _saveLogs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('auto_trading_logs', _logs);
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      // Local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('auto_trading_logs', _logs);
+    } else {
+      // Firebase cloud storage
+      await _firestoreService.saveAutoTradingLogs(_logs);
+    }
   }
 
   void _addLog(String message) {
@@ -54,8 +73,14 @@ class AutoTradingProvider extends ChangeNotifier {
   }
 
   Future<void> runDailyScan(AIProvider ai, PortfolioProvider portfolio, WatchlistProvider watchlist) async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastScan = prefs.getString('last_scan_date');
+    String? lastScan;
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      final prefs = await SharedPreferences.getInstance();
+      lastScan = prefs.getString('last_scan_date');
+    } else {
+      lastScan = await _firestoreService.loadLastScanDate();
+    }
+    
     final today = DateTime.now().toString().split(' ')[0];
 
     if (lastScan == today) {
@@ -66,7 +91,12 @@ class AutoTradingProvider extends ChangeNotifier {
     _addLog('Starting Daily Portfolio Scan...');
     await analyzePortfolio(ai, portfolio, watchlist, force: true);
     
-    await prefs.setString('last_scan_date', today);
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_scan_date', today);
+    } else {
+      await _firestoreService.saveLastScanDate(today);
+    }
     _addLog('Daily scan completed.');
   }
 
@@ -99,8 +129,14 @@ class AutoTradingProvider extends ChangeNotifier {
     if (_isRunning) return;
     
     if (!force) {
-      final prefs = await SharedPreferences.getInstance();
-      final lastScan = prefs.getString('last_scan_date');
+      String? lastScan;
+      if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+        final prefs = await SharedPreferences.getInstance();
+        lastScan = prefs.getString('last_scan_date');
+      } else {
+        lastScan = await _firestoreService.loadLastScanDate();
+      }
+      
       final today = DateTime.now().toString().split(' ')[0];
       if (lastScan == today) {
         _addLog('Daily scan already completed. Use "Analyze Portfolio" to force run.');
@@ -381,5 +417,10 @@ class AutoTradingProvider extends ChangeNotifier {
     } catch (e) {
       _addLog('Trade failed: $e');
     }
+  }
+
+  // Call this when user logs in
+  Future<void> reloadData() async {
+    await _loadLogs();
   }
 }

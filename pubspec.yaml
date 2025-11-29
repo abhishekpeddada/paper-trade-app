@@ -21,6 +21,10 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   wakelock_plus: ^1.4.0
   interactive_chart: ^0.3.6
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.16.0
+  google_sign_in: ^6.1.6
+  cloud_firestore: ^4.14.0
 
 
 dev_dependencies:

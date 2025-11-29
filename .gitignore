@@ -1,4 +1,3 @@
-# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -9,18 +8,11 @@
 .history
 .svn/
 
-# IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-# .vscode/
-
-# Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -44,3 +36,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+google-services.json
+android/app/google-services.json
+
+# Firebase Config
+lib/config/firebase_options.dart
+
+# Environment variables (API keys, secrets)
+.env
+*.env
+!.env.example

@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/trade_models.dart';
 import '../../data/repositories/stock_repository.dart';
 import '../../core/utils/currency_helper.dart';
+import '../../core/services/firestore_service.dart';
 
 class PortfolioProvider extends ChangeNotifier {
   final StockRepository _repository = StockRepository();
+  final FirestoreService _firestoreService = FirestoreService();
   double _balance = 100000.0; // Initial virtual cash in INR
   List<Position> _positions = [];
   List<Order> _orders = [];
@@ -51,32 +54,60 @@ class PortfolioProvider extends ChangeNotifier {
   }
 
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    _balance = prefs.getDouble('balance') ?? 100000.0;
-    
-    final positionsJson = prefs.getStringList('positions') ?? [];
-    _positions = positionsJson.map((e) => Position.fromJson(json.decode(e))).toList();
+    // Use Firebase on supported platforms, SharedPreferences on Linux/Windows
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      // Local storage fallback
+      final prefs = await SharedPreferences.getInstance();
+      _balance = prefs.getDouble('balance') ?? 100000.0;
+      
+      final positionsJson = prefs.getStringList('positions') ?? [];
+      _positions = positionsJson.map((e) => Position.fromJson(json.decode(e))).toList();
 
-    final ordersJson = prefs.getStringList('orders') ?? [];
-    _orders = ordersJson.map((e) => Order.fromJson(json.decode(e))).toList();
+      final ordersJson = prefs.getStringList('orders') ?? [];
+      _orders = ordersJson.map((e) => Order.fromJson(json.decode(e))).toList();
+    } else {
+      // Firebase cloud storage
+      final data = await _firestoreService.loadPortfolioData();
+      if (data != null) {
+        _balance = (data['balance'] as num).toDouble();
+        
+        final positionsList = List<String>.from(data['positions'] ?? []);
+        _positions = positionsList.map((e) => Position.fromJson(json.decode(e))).toList();
+
+        final ordersList = List<String>.from(data['orders'] ?? []);
+        _orders = ordersList.map((e) => Order.fromJson(json.decode(e))).toList();
+      } else {
+        _balance = 100000.0;
+        _positions = [];
+        _orders = [];
+      }
+    }
     
     notifyListeners();
     
-    // Refresh prices if we have positions
     if (_positions.isNotEmpty) {
       refreshPrices();
     }
   }
 
   Future<void> _saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('balance', _balance);
-    
     final positionsJson = _positions.map((e) => json.encode(e.toJson())).toList();
-    await prefs.setStringList('positions', positionsJson);
-
     final ordersJson = _orders.map((e) => json.encode(e.toJson())).toList();
-    await prefs.setStringList('orders', ordersJson);
+    
+    if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+      // Local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('balance', _balance);
+      await prefs.setStringList('positions', positionsJson);
+      await prefs.setStringList('orders', ordersJson);
+    } else {
+      // Firebase cloud storage
+      await _firestoreService.savePortfolioData(
+        balance: _balance,
+        positions: positionsJson,
+        orders: ordersJson,
+      );
+    }
   }
 
   Future<void> executeOrder(String symbol, double quantity, double price, OrderType type) async {
@@ -281,5 +312,10 @@ class PortfolioProvider extends ChangeNotifier {
       totalPL += getProfitLoss(position);
     }
     return totalPL;
+  }
+
+  // Call this when user logs in
+  Future<void> reloadData() async {
+    await _loadData();
   }
 }

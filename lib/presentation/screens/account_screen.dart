@@ -6,6 +6,7 @@ import '../../data/services/openrouter_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_helper.dart';
 import '../widgets/custom_button.dart';
+import '../../core/services/auth_service.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -48,7 +49,7 @@ class AccountScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            CustomButton(
+              CustomButton(
               text: 'Clear AI Logs',
               color: AppTheme.surfaceColor,
               textColor: AppTheme.textPrimary,
@@ -58,6 +59,41 @@ class AccountScreen extends StatelessWidget {
                   const SnackBar(content: Text('AI Logs cleared')),
                 );
               },
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: 'Sign Out',
+                color: Colors.red.withValues(alpha: 0.1),
+                textColor: Colors.red,
+                onPressed: () async {
+                  // Confirm dialog
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: AppTheme.surfaceColor,
+                      title: const Text('Sign Out', style: TextStyle(color: AppTheme.textPrimary)),
+                      content: const Text('Are you sure you want to sign out?', style: TextStyle(color: AppTheme.textSecondary)),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    await AuthService().signOut();
+                    // Navigation will be handled by main.dart stream
+                  }
+                },
+              ),
             ),
           ],
         ),
