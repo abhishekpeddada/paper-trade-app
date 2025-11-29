@@ -2,17 +2,17 @@
 
 A Flutter-based paper trading application with AI-powered analysis, supporting multiple platforms.
 
-## ✨ Features
+## Features
 
-- 📊 Real-time stock watchlist with Yahoo Finance data
-- 💼 Virtual portfolio management (₹100,000 starting capital)
-- 🤖 AI-powered trading analysis (OpenRouter integration)
-- 📈 Technical indicators (PSAR, RSI, MACD, Bollinger Bands)
-- 📱 Cross-platform (Android, Web, Linux desktop)
-- 🔐 Google Sign-In with Firebase (Android/Web)
-- 💾 Hybrid storage (Cloud sync on Android/Web, local on Linux/Windows)
+- Real-time stock watchlist with Yahoo Finance data
+- Virtual portfolio management (₹100,000 starting capital)
+- AI-powered trading analysis (OpenRouter integration)
+- Technical indicators (PSAR, RSI, MACD, Bollinger Bands)
+- Cross-platform (Android, Web, Linux desktop)
+- Google Sign-In with Firebase (Android/Web)
+- Hybrid storage (Cloud sync on Android/Web, local on Linux/Windows)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### For Contributors
 
@@ -35,7 +35,7 @@ cp .env.example .env
 flutter run
 ```
 
-## 📱 Platform Support
+## Platform Support
 
 | Platform | Google Sign-In | Cloud Sync | Local Storage |
 |----------|---------------|------------|---------------|
@@ -44,14 +44,14 @@ flutter run
 | Linux    | ❌            | ❌         | ✅            |
 | Windows  | ❌            | ❌         | ✅            |
 
-## 🔧 Configuration Required
+## Configuration Required
 
 1. **Firebase Project**: For authentication and cloud storage
 2. **OpenRouter API Key**: For AI analysis features (optional)
 
 See [SETUP.md](SETUP.md) for detailed configuration steps.
 
-## 📖 Documentation
+## Documentation
 
 - [Setup Guide](SETUP.md) - Complete setup instructions
 - [Firebase Setup](https://console.firebase.google.com/) - Firebase console
