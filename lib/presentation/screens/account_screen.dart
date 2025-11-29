@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../../logic/providers/portfolio_provider.dart';
 import '../../logic/providers/ai_provider.dart';
 import '../../data/services/openrouter_service.dart';
@@ -25,6 +27,8 @@ class AccountScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildProfileHeader(context),
+            const SizedBox(height: 24),
             _buildBalanceCard(portfolioProvider),
             const SizedBox(height: 24),
             const Text(
@@ -97,6 +101,255 @@ class AccountScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: () => _showUserDetails(context, user),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.primaryColor,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 40,
+                backgroundColor: AppTheme.backgroundColor,
+                backgroundImage: user.photoURL != null 
+                  ? NetworkImage(user.photoURL!)
+                  : null,
+                child: user.photoURL == null
+                  ? Text(
+                      user.displayName?.substring(0, 1).toUpperCase() ?? 
+                      user.email?.substring(0, 1).toUpperCase() ?? '?',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    )
+                  : null,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.displayName ?? 'User',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user.email ?? '',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.touch_app,
+                        size: 14,
+                        color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tap to view details',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: AppTheme.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUserDetails(BuildContext context, User user) {
+    final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Profile Picture
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.primaryColor,
+                  width: 3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 60,
+                backgroundColor: AppTheme.backgroundColor,
+                backgroundImage: user.photoURL != null 
+                  ? NetworkImage(user.photoURL!)
+                  : null,
+                child: user.photoURL == null
+                  ? Text(
+                      user.displayName?.substring(0, 1).toUpperCase() ?? 
+                      user.email?.substring(0, 1).toUpperCase() ?? '?',
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    )
+                  : null,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // User Details
+            _buildDetailRow(Icons.person, 'Name', user.displayName ?? 'Not available'),
+            const SizedBox(height: 12),
+            _buildDetailRow(Icons.email, 'Email', user.email ?? 'Not available'),
+            const SizedBox(height: 12),
+            _buildDetailRow(Icons.fingerprint, 'User ID', user.uid),
+            const SizedBox(height: 12),
+            _buildDetailRow(
+              Icons.calendar_today,
+              'Account Created',
+              user.metadata.creationTime != null
+                ? dateFormat.format(user.metadata.creationTime!)
+                : 'Not available',
+            ),
+            const SizedBox(height: 12),
+            _buildDetailRow(
+              Icons.access_time,
+              'Last Sign In',
+              user.metadata.lastSignInTime != null
+                ? dateFormat.format(user.metadata.lastSignInTime!)
+                : 'Not available',
+            ),
+            const SizedBox(height: 24),
+            
+            // Close button
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: 'Close',
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.primaryColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
