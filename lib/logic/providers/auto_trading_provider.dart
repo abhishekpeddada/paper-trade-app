@@ -70,7 +70,6 @@ class AutoTradingProvider extends ChangeNotifier {
     final today = DateTime.now().toString().split(' ')[0];
 
     if (lastScan == today) {
-      _addLog('Daily scan already completed for today.');
       return;
     }
 
@@ -125,7 +124,6 @@ class AutoTradingProvider extends ChangeNotifier {
       
       final today = DateTime.now().toString().split(' ')[0];
       if (lastScan == today) {
-        _addLog('Daily scan already completed. Use "Analyze Portfolio" to force run.');
         return;
       }
     }
