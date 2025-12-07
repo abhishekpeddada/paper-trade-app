@@ -88,6 +88,7 @@ class AuthWrapper extends StatelessWidget {
       context.read<PortfolioProvider>().reloadData();
       context.read<WatchlistProvider>().reloadData();
       context.read<AutoTradingProvider>().reloadData();
+      context.read<AIProvider>().reloadData();
     });
 
     return const MainScreen();

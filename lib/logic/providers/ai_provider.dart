@@ -251,4 +251,14 @@ class AIProvider extends ChangeNotifier {
     _saveState();
     notifyListeners();
   }
+
+  Future<void> reloadData() async {
+    if (defaultTargetPlatform != TargetPlatform.linux && defaultTargetPlatform != TargetPlatform.windows) {
+      final firebaseSystem = await _firestoreService.loadTradingSystem();
+      if (firebaseSystem != null) {
+        _tradingSystem = firebaseSystem;
+        notifyListeners();
+      }
+    }
+  }
 }
