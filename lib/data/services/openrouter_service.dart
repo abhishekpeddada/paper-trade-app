@@ -159,6 +159,12 @@ CORE INDICATORS:
    - Price below lower band: Oversold
    - Price near middle band: Neutral
 
+5. **SMA (50-day Moving Average)**: Trend direction indicator
+   - Price above SMA: Bullish trend
+   - Price below SMA: Bearish trend
+   - Crossover above SMA: Potential buy signal
+   - Crossover below SMA: Potential sell signal
+
 ${userPreferences != null && userPreferences.isNotEmpty ? '''
 USER PREFERENCES:
 $userPreferences

@@ -241,14 +241,67 @@ class StrategyEngine {
       }
     }
 
-    return StrategyResult(
-      indicatorLine: middle,
-      secondaryLine: upper,
-      signals: signals,
-      indicatorName: 'BB Middle',
-      secondaryName: 'BB Bands',
-    );
+  return StrategyResult(
+    indicatorLine: middle,
+    secondaryLine: upper,
+    signals: signals,
+    indicatorName: 'BB Middle',
+    secondaryName: 'BB Bands',
+  );
+}
+
+static StrategyResult calculateSMA(List<OHLCData> candles, {int period = 50}) {
+  List<double> sma = List.filled(candles.length, double.nan);
+  List<SignalPoint> signals = [];
+
+  if (candles.length < period) return StrategyResult(
+    indicatorLine: sma,
+    signals: signals,
+    indicatorName: 'SMA ($period)',
+  );
+
+  final closes = candles.map((c) => c.close).toList();
+
+  // Calculate SMA
+  for (int i = period - 1; i < candles.length; i++) {
+    double sum = 0;
+    for (int j = 0; j < period; j++) {
+      sum += closes[i - j];
+    }
+    sma[i] = sum / period;
+
+    // Generate crossover signals
+    if (i > period) {
+      final prevClose = closes[i - 1];
+      final currClose = closes[i];
+      final prevSMA = sma[i - 1];
+      final currSMA = sma[i];
+
+      // Bullish crossover: price crosses above SMA
+      if (prevClose <= prevSMA && currClose > currSMA) {
+        signals.add(SignalPoint(
+          index: i,
+          type: SignalType.buy,
+          price: currClose,
+        ));
+      }
+      // Bearish crossover: price crosses below SMA
+      else if (prevClose >= prevSMA && currClose < currSMA) {
+        signals.add(SignalPoint(
+          index: i,
+          type: SignalType.sell,
+          price: currClose,
+        ));
+      }
+    }
   }
+
+  return StrategyResult(
+    indicatorLine: sma,
+    signals: signals,
+    indicatorName: 'SMA ($period)',
+  );
+}
 
   static List<double> _calculateEMA(List<double> data, int period) {
     List<double> ema = List.filled(data.length, double.nan);

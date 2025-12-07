@@ -217,6 +217,58 @@ class _StrategyAnalyzerScreenState extends State<StrategyAnalyzerScreen> {
               );
             }).toList(),
           ),
+          // MA Period Selector - show when SMA is selected
+          if (provider.selectedStrategy?.id == 'sma') ...[
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text(
+                  'MA Period:',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    children: [20, 50, 100, 200].map((period) {
+                      final isSelected = provider.maPeriod == period;
+                      return GestureDetector(
+                        onTap: () => provider.setMAPeriod(period),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? AppTheme.primaryColor
+                                : AppTheme.backgroundColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected 
+                                  ? AppTheme.primaryColor 
+                                  : AppTheme.textSecondary.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            '$period',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : AppTheme.textSecondary,
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

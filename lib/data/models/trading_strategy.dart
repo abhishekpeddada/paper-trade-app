@@ -36,6 +36,12 @@ class TradingStrategy {
       description: 'Volatility-based breakout strategy',
       iconName: 'analytics',
     ),
+    TradingStrategy(
+      id: 'sma',
+      name: 'Moving Average',
+      description: 'Simple Moving Average trend indicator',
+      iconName: 'stacked_line_chart',
+    ),
   ];
 }
 

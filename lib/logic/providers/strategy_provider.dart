@@ -12,6 +12,7 @@ class StrategyProvider with ChangeNotifier {
   String _timeframe = '1d';
  bool _isLoading = false;
   String? _errorMessage;
+  int _maPeriod = 50; // Default 50-day MA
   
   List<OHLCData> _chartData = [];
   StrategyResult? _strategyResult;
@@ -25,6 +26,7 @@ class StrategyProvider with ChangeNotifier {
   bool get hasData => _chartData.isNotEmpty;
   List<OHLCData> get chartData => _chartData;
   StrategyResult? get strategyResult => _strategyResult;
+  int get maPeriod => _maPeriod;
 
   // Setters
   void setSymbol(String value) {
@@ -45,6 +47,16 @@ class StrategyProvider with ChangeNotifier {
   void setTimeframe(String value) {
     _timeframe = value;
     notifyListeners();
+  }
+
+  void setMAPeriod(int period) {
+    _maPeriod = period;
+    notifyListeners();
+    
+    // Re-apply strategy if SMA is selected
+    if (_selectedStrategy?.id == 'sma' && _chartData.isNotEmpty) {
+      _applyStrategy();
+    }
   }
 
   Future<void> applyStrategy({required TradingStrategy strategy}) async {
@@ -96,6 +108,9 @@ class StrategyProvider with ChangeNotifier {
       case 'bollinger':
         _strategyResult = StrategyEngine.calculateBollingerBands(_chartData);
         break;
+      case 'sma':
+        _strategyResult = StrategyEngine.calculateSMA(_chartData, period: _maPeriod);
+        break;
     }
     notifyListeners();
   }
@@ -109,3 +124,4 @@ class StrategyProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+

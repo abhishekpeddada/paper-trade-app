@@ -367,18 +367,37 @@ class AutoTradingProvider extends ChangeNotifier {
       
       data['bollingerBands'] = {
         'upper': upperBand,
-        'middle': middleBand,
-        'lower': lowerBand,
-        'position': position,
-      };
-    } catch (e) {
-      logs.add('• Bollinger Bands: Error calculating');
-    }
-
-    return {
-      'logs': logs,
-      'data': data,
+      'middle': middleBand,
+      'lower': lowerBand,
+      'position': position,
     };
+  } catch (e) {
+    logs.add('• Bollinger Bands: Error calculating');
+  }
+
+  // SMA (50-day)
+  try {
+    final smaResult = StrategyEngine.calculateSMA(ohlcData, period: 50);
+    final currentSMA = smaResult.indicatorLine.last;
+    final currentPrice = ohlcData.last.close;
+    final isBullish = currentPrice > currentSMA;
+    
+    logs.add('• SMA (50): $currencySymbol${currentSMA.toStringAsFixed(2)} ${isBullish ? "📈 (Bullish)" : "📉 (Bearish)"}');
+    logs.add('  └─ Price ${isBullish ? "above" : "below"} 50-day MA - ${isBullish ? "Uptrend" : "Downtrend"}');
+    
+    data['sma'] = {
+      'value': currentSMA,
+      'signal': isBullish ? 'BUY' : 'SELL',
+      'isBullish': isBullish,
+    };
+  } catch (e) {
+    logs.add('• SMA (50): Error calculating');
+  }
+
+  return {
+    'logs': logs,
+    'data': data,
+  };
   }
 
   Future<void> _executeAutoTrade(String symbol, AISignal signal, PortfolioProvider portfolio) async {
