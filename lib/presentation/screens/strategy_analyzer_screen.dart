@@ -6,6 +6,7 @@ import '../../data/models/trading_strategy.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/candlestick_chart_widget.dart';
 import 'full_chart_screen.dart';
+import 'backtesting_screen.dart';
 
 class StrategyAnalyzerScreen extends StatefulWidget {
   const StrategyAnalyzerScreen({super.key});
@@ -28,6 +29,25 @@ class _StrategyAnalyzerScreenState extends State<StrategyAnalyzerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Strategy Analyzer'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BacktestingScreen(
+                    initialSymbol: _symbolController.text.isNotEmpty 
+                        ? _symbolController.text 
+                        : null,
+                    initialStrategy: Provider.of<StrategyProvider>(context, listen: false).selectedStrategy?.id,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Backtest Strategy',
+          ),
+        ],
       ),
       body: Consumer<StrategyProvider>(
         builder: (context, provider, child) {
