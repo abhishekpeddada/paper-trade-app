@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'strategy_analyzer_screen.dart';
+import 'bulk_analysis_screen.dart';
 
 class AiActivityScreen extends StatelessWidget {
   const AiActivityScreen({super.key});
@@ -77,28 +78,50 @@ class AiActivityScreen extends StatelessWidget {
                   ],
                 )
               else
-                Row(
+                Column(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => provider.analyzeWatchlist(ai, portfolio, watchlist),
-                        icon: const Icon(Icons.list_alt, size: 18),
-                        label: const Text('Analyze Watchlist'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => provider.analyzeWatchlist(ai, portfolio, watchlist),
+                            icon: const Icon(Icons.list_alt, size: 18),
+                            label: const Text('Watchlist'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => provider.analyzePortfolio(ai, portfolio, watchlist, force: true),
+                            icon: const Icon(Icons.pie_chart, size: 18),
+                            label: const Text('Portfolio'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.textPrimary,
+                              side: const BorderSide(color: AppTheme.textSecondary),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => provider.analyzePortfolio(ai, portfolio, watchlist, force: true),
-                        icon: const Icon(Icons.pie_chart, size: 18),
-                        label: const Text('Analyze Portfolio'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.textPrimary,
-                          side: const BorderSide(color: AppTheme.textSecondary),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const BulkAnalysisScreen()),
+                          );
+                        },
+                        icon: const Icon(Icons.upload_file, size: 18),
+                        label: const Text('Import CSV for Bulk Analysis'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentColor,
+                          foregroundColor: Colors.white,
                         ),
                       ),
                     ),

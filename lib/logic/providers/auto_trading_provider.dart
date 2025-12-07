@@ -426,4 +426,156 @@ class AutoTradingProvider extends ChangeNotifier {
   Future<void> reloadData() async {
     await _loadLogs();
   }
+
+  // Cancel ongoing analysis
+  void cancelAnalysis() {
+    if (_isRunning) {
+      _isRunning = false;
+      _addLog('⚠️ Analysis cancelled by user');
+      notifyListeners();
+    }
+  }
+
+  // Bulk analysis from CSV
+  Future<void> analyzeBulkSymbols({
+    required List<String> symbols,
+    required AIProvider ai,
+    required PortfolioProvider portfolio,
+    required WatchlistProvider watchlist,
+  }) async {
+    if (_isRunning) return;
+    
+    _isRunning = true;
+    _progress = 0.0;
+    _addLog('═══════════════════════════════════════════════');
+    _addLog('📊 BULK ANALYSIS STARTED');
+    _addLog('   ${symbols.length} symbols to analyze');
+    _addLog('   Rate limited: 3-4 seconds between calls');
+    _addLog('═══════════════════════════════════════════════');
+    notifyListeners();
+
+    int completed = 0;
+    int matched = 0;
+    int traded = 0;
+    int failed = 0;
+
+    for (final symbol in symbols) {
+      if (!_isRunning) {
+        _addLog('Analysis stopped.');
+        break;
+      }
+
+      _addLog('');
+      _addLog('╔════════════════════════════════════════════╗');
+      _addLog('║ 📊 Analyzing $symbol (${completed + 1}/${symbols.length})');
+      _addLog('╚════════════════════════════════════════════╝');
+
+      try {
+        // Fetch OHLC data for indicator calculation
+        final ohlcJson = await _yahooService.getOHLCData(symbol, timeframe: '1d');
+        if (ohlcJson.isEmpty) {
+          _addLog('❌ No data available for $symbol');
+          failed++;
+          completed++;
+          _progress = completed / symbols.length;
+          notifyListeners();
+          await Future.delayed(const Duration(seconds: 3));
+          continue;
+        }
+
+        final ohlcData = ohlcJson.map((json) => OHLCData.fromJson(json)).toList();
+        if (ohlcData.length < 50) {
+          _addLog('❌ Insufficient data for analysis (need at least 50 candles)');
+          failed++;
+          completed++;
+          _progress = completed / symbols.length;
+          notifyListeners();
+          await Future.delayed(const Duration(seconds: 3));
+          continue;
+        }
+
+        final currentPrice = ohlcData.last.close;
+        final currencySymbol = CurrencyHelper.getCurrencySymbol(symbol);
+
+        _addLog('💰 Current Price: $currencySymbol${currentPrice.toStringAsFixed(2)}');
+
+        // Calculate all indicators
+        final indicatorContext = await _calculateIndicators(ohlcData, symbol);
+
+        final indicatorLogs = indicatorContext['logs'] as List<String>? ?? [];
+        for (final log in indicatorLogs) {
+          _addLog(log);
+        }
+
+        
+        _addLog('');
+        _addLog('🤖 Consulting AI with Trading System...');
+        final signal = await ai.analyzeStockWithIndicators(
+          symbol,
+          indicatorContext['data'],
+        );
+
+        if (signal != null) {
+          _addLog('🤖 AI Signal: ${signal.signal} (${(signal.confidence * 100).toInt()}%)');
+
+          // Check if it matches trading system criteria
+          if (signal.signal == 'BUY' && signal.confidence > 0.6) {
+            matched++;
+            
+            // Add to watchlist
+            _addLog('✓ Adding $symbol to watchlist');
+            await watchlist.addToWatchlist(symbol);
+
+            // Execute trade if high confidence
+            if (signal.confidence > 0.7) {
+              _addLog('✓ Executing BUY trade for $symbol');
+              await _executeAutoTrade(symbol, signal, portfolio);
+              traded++;
+            }
+          } else if (signal.signal == 'SELL') {
+            _addLog('📉 SELL signal - checking positions...');
+            final hasPosition = portfolio.positions.any((p) => p.symbol == symbol);
+            if (hasPosition && signal.confidence > 0.7) {
+              await _executeAutoTrade(symbol, signal, portfolio);
+              traded++;
+            }
+          } else {
+            _addLog('⚖️ HOLD signal or low confidence - skipping');
+          }
+        } else {
+          _addLog('❌ No signal generated');
+          failed++;
+        }
+
+      } catch (e) {
+        _addLog('❌ Error: $e');
+        failed++;
+      }
+
+      completed++;
+      _progress = completed / symbols.length;
+      notifyListeners();
+
+      // Rate limiting: wait 3-4 seconds between API calls
+      if (_isRunning && completed < symbols.length) {
+        _addLog('⏳ Rate limit delay (3s)...');
+        await Future.delayed(const Duration(seconds: 3));
+      }
+    }
+
+    // Summary
+    _addLog('');
+    _addLog('═══════════════════════════════════════════════');
+    _addLog('📊 BULK ANALYSIS COMPLETE');
+    _addLog('   Total: ${symbols.length}');
+    _addLog('   Matched: $matched');
+    _addLog('   Traded: $traded');
+    _addLog('   Failed: $failed');
+    _addLog('═══════════════════════════════════════════════');
+
+    _isRunning = false;
+    _progress = 1.0;
+    notifyListeners();
+  }
 }
+
