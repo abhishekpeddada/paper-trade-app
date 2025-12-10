@@ -344,4 +344,134 @@ static StrategyResult calculateSMA(List<OHLCData> candles, {int period = 50}) {
 
     return ema;
   }
+
+  static StrategyResult calculateSupportResistance(List<OHLCData> candles, {int leftBars = 15, int rightBars = 15, double volumeThreshold = 20}) {
+    List<double> srLine = List.filled(candles.length, double.nan);
+    List<SignalPoint> signals = [];
+    
+    if (candles.length < leftBars + rightBars + 1) {
+      return StrategyResult(
+        indicatorLine: srLine,
+        signals: signals,
+        indicatorName: 'S/R ($leftBars,$rightBars)',
+      );
+    }
+
+    final shortEMA = _calculateVolumeEMA(candles, 5);
+    final longEMA = _calculateVolumeEMA(candles, 10);
+    
+    double? currentResistance;
+    double? currentSupport;
+    List<double> resistanceLine = List.filled(candles.length, double.nan);
+    List<double> supportLine = List.filled(candles.length, double.nan);
+
+    for (int i = leftBars; i < candles.length - rightBars; i++) {
+      bool isPivotHigh = true;
+      double pivotHigh = candles[i].high;
+      for (int j = i - leftBars; j <= i + rightBars; j++) {
+        if (j != i && candles[j].high >= pivotHigh) {
+          isPivotHigh = false;
+          break;
+        }
+      }
+      if (isPivotHigh) {
+        currentResistance = pivotHigh;
+      }
+
+      bool isPivotLow = true;
+      double pivotLow = candles[i].low;
+      for (int j = i - leftBars; j <= i + rightBars; j++) {
+        if (j != i && candles[j].low <= pivotLow) {
+          isPivotLow = false;
+          break;
+        }
+      }
+      if (isPivotLow) {
+        currentSupport = pivotLow;
+      }
+
+      if (currentResistance != null) resistanceLine[i] = currentResistance;
+      if (currentSupport != null) supportLine[i] = currentSupport;
+    }
+
+    for (int i = leftBars + rightBars; i < candles.length; i++) {
+      if (resistanceLine[i].isNaN && !resistanceLine[i-1].isNaN) {
+        resistanceLine[i] = resistanceLine[i-1];
+      }
+      if (supportLine[i].isNaN && !supportLine[i-1].isNaN) {
+        supportLine[i] = supportLine[i-1];
+      }
+
+      double volumeOsc = 0;
+      if (!longEMA[i].isNaN && longEMA[i] > 0) {
+        volumeOsc = 100 * (shortEMA[i] - longEMA[i]) / longEMA[i];
+      }
+
+      final close = candles[i].close;
+      final prevClose = candles[i - 1].close;
+
+
+      if (!resistanceLine[i].isNaN && !resistanceLine[i-1].isNaN) {
+        final resistance = resistanceLine[i];
+          if (volumeOsc > 5 || (close - resistance) / resistance > 0.01) {
+            signals.add(SignalPoint(
+              index: i,
+              type: SignalType.buy,
+              price: close,
+              stopLoss: supportLine[i].isNaN ? null : supportLine[i],
+              target: close + (close - (supportLine[i].isNaN ? close * 0.95 : supportLine[i])),
+            ));
+          }
+        }
+      }
+
+      if (!supportLine[i].isNaN && !supportLine[i-1].isNaN) {
+        final support = supportLine[i];
+        if (prevClose >= support && close < support) {
+          if (volumeOsc > 5 || (support - close) / support > 0.01) {
+            signals.add(SignalPoint(
+              index: i,
+              type: SignalType.sell,
+              price: close,
+            ));
+          }
+        }
+      }
+    }
+
+    for (int i = 0; i < candles.length; i++) {
+      if (!resistanceLine[i].isNaN) {
+        srLine[i] = resistanceLine[i];
+      } else if (!supportLine[i].isNaN) {
+        srLine[i] = supportLine[i];
+      }
+    }
+
+    return StrategyResult(
+      indicatorLine: resistanceLine,
+      secondaryLine: supportLine,
+      signals: signals,
+      indicatorName: 'Resistance',
+      secondaryName: 'Support',
+    );
+  }
+
+  static List<double> _calculateVolumeEMA(List<OHLCData> candles, int period) {
+    List<double> ema = List.filled(candles.length, double.nan);
+    if (candles.length < period) return ema;
+
+    final k = 2 / (period + 1);
+    
+    double sum = 0;
+    for (int i = 0; i < period; i++) {
+      sum += candles[i].volume;
+    }
+    ema[period - 1] = sum / period;
+    
+    for (int i = period; i < candles.length; i++) {
+      ema[i] = (candles[i].volume - ema[i - 1]) * k + ema[i - 1];
+    }
+
+    return ema;
+  }
 }

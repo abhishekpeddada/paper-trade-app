@@ -170,6 +170,8 @@ class BacktestEngine {
         return StrategyEngine.calculateBollingerBands(candles);
       case 'sma':
         return StrategyEngine.calculateSMA(candles);
+      case 'support_resistance':
+        return StrategyEngine.calculateSupportResistance(candles);
       default:
         return StrategyEngine.calculatePSAR(candles);
     }

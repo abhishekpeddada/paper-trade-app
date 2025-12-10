@@ -454,22 +454,39 @@ class _BacktestingScreenState extends State<BacktestingScreen> {
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
-              Text(
-                '${r.trades.length} trades',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              Row(
+                children: [
+                  Text(
+                    '${r.trades.length} trades',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _showFullTradeHistory(context, r),
+                    icon: const Icon(Icons.fullscreen, size: 20),
+                    tooltip: 'View All',
+                    color: AppTheme.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          ...r.trades.take(10).map((trade) => _buildTradeRow(trade)),
-          if (r.trades.length > 10)
+          ...r.trades.take(5).map((trade) => _buildDetailedTradeRow(trade)),
+          if (r.trades.length > 5)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '+${r.trades.length - 10} more trades...',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              child: TextButton(
+                onPressed: () => _showFullTradeHistory(context, r),
+                child: Text(
+                  'View all ${r.trades.length} trades →',
+                  style: const TextStyle(color: AppTheme.primaryColor),
+                ),
               ),
             ),
         ],
@@ -477,31 +494,123 @@ class _BacktestingScreenState extends State<BacktestingScreen> {
     );
   }
 
-  Widget _buildTradeRow(BacktestTrade trade) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+  Widget _buildDetailedTradeRow(BacktestTrade trade) {
+    final holdingDays = trade.exitDate.difference(trade.entryDate).inDays;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: trade.isWin ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            trade.isWin ? Icons.arrow_upward : Icons.arrow_downward,
-            color: trade.isWin ? Colors.green : Colors.red,
-            size: 16,
+          // Header row with P/L
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    trade.isWin ? Icons.trending_up : Icons.trending_down,
+                    color: trade.isWin ? Colors.green : Colors.red,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    trade.signal,
+                    style: TextStyle(
+                      color: trade.isWin ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (trade.isWin ? Colors.green : Colors.red).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${trade.profitLossPct >= 0 ? '+' : ''}${trade.profitLossPct.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                    color: trade.isWin ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '${_formatDate(trade.entryDate)} → ${_formatDate(trade.exitDate)}',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-            ),
+          const SizedBox(height: 8),
+          // Details row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entry: ${trade.entryPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                    Text(
+                      _formatDate(trade.entryDate),
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: AppTheme.textSecondary, size: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Exit: ${trade.exitPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                    Text(
+                      _formatDate(trade.exitDate),
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
           Text(
-            '${trade.profitLossPct >= 0 ? '+' : ''}${trade.profitLossPct.toStringAsFixed(2)}%',
-            style: TextStyle(
-              color: trade.isWin ? Colors.green : Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
+            '$holdingDays days · P/L: ${trade.profitLoss >= 0 ? '+' : ''}${trade.profitLoss.toStringAsFixed(2)}',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showFullTradeHistory(BuildContext context, BacktestResult r) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          appBar: AppBar(
+            title: Text('${r.symbol} Trade History'),
+          ),
+          body: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: r.trades.length,
+            itemBuilder: (context, index) {
+              return _buildDetailedTradeRow(r.trades[index]);
+            },
+          ),
+        ),
       ),
     );
   }

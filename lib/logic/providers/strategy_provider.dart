@@ -111,6 +111,9 @@ class StrategyProvider with ChangeNotifier {
       case 'sma':
         _strategyResult = StrategyEngine.calculateSMA(_chartData, period: _maPeriod);
         break;
+      case 'support_resistance':
+        _strategyResult = StrategyEngine.calculateSupportResistance(_chartData);
+        break;
     }
     notifyListeners();
   }

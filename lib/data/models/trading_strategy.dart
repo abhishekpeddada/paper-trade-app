@@ -42,6 +42,12 @@ class TradingStrategy {
       description: 'Simple Moving Average trend indicator',
       iconName: 'stacked_line_chart',
     ),
+    TradingStrategy(
+      id: 'support_resistance',
+      name: 'Support & Resistance',
+      description: 'Pivot-based S/R levels with volume breakout',
+      iconName: 'layers',
+    ),
   ];
 }
 
